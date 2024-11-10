@@ -16,22 +16,18 @@ import os
 from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
-import undetected_chromedriver as uc
 
 def run():
-#def main():
-
     """크롤러 메인 함수"""
     # 실행 전 체크포인트 확인
     print_checkpoint('kstartup')
     
-    print("k-startup 크롤링 시작...")
+    print("K-Startup 크롤링 시작...")
     base_url = "https://www.k-startup.go.kr/web/contents/bizpbanc-ongoing.do"
     
     # 데이터 수집
-    announcements = get_announcement_list(base_url, start_page=1, end_page=1)
-    #announcements = get_announcement_list(base_url, start_page=1, end_page=None)
-
+    announcements = get_announcement_list(base_url, start_page=1, end_page=None)
+    
     print("\n최종 결과:")
     print(f"총 {len(announcements)}개의 공고 수집 완료")
     
@@ -48,96 +44,155 @@ def run():
 
 # 웹드라이버 설정
 def setup_driver():
-    """웹드라이버 설정"""
-    options = uc.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--window-size=1920,1080')
-    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    options.add_argument(f'user-agent={user_agent}')
+    chrome_options = Options()
     
+    # 리눅스 환경에서의 추가 설정
+    chrome_options.add_argument('--headless')  # 헤드리스 모드 실행
+    chrome_options.add_argument('--no-sandbox')  # 샌드박스 비활성화
+    chrome_options.add_argument('--disable-dev-shm-usage')  # 공유 메모리 사용 비활성화
+    chrome_options.add_argument('--disable-gpu')  # GPU 하드웨어 가속 비활성화
+    
+    # 기존 설정들
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_argument('--window-size=1920,1080')
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+    # 크롬 드라이버 생성 시 에러 처리
     try:
-        driver = uc.Chrome(options=options)
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=chrome_options
+        )
         return driver
     except Exception as e:
         print(f"드라이버 설정 중 오류 발생: {e}")
-        raise
+        
+        # 대체 방법 시도
+        try:
+            print("대체 방법으로 드라이버 설정 시도...")
+            chrome_options.add_argument('--remote-debugging-port=9222')
+            driver = webdriver.Chrome(
+                options=chrome_options
+            )
+            return driver
+        except Exception as sub_e:
+            print(f"대체 방법도 실패: {sub_e}")
+            raise
 
 # 공고 상세 페이지 크롤링 함수
-def get_announcement_detail(driver, url):
-    """상세 페이지에서 공고 정보 추출"""
+def get_announcement_detail_selenium(driver):
+    """Selenium을 사용한 상세 페이지 데이터 추출"""
     try:
-        driver.get(url)
-        time.sleep(2)
-        
         data = {
             'POSTDATE': None,
             'ANNOUNCEMENT_NUMBER': None,
             'TITLE': None,
             'CATEGORY': None,
-            'LOCATION': "전국",
+            'LOCATION': "전국",  # 기본값
             'CONTENT': None,
             'START': None,
             'END': None,
             'AGENCY': None,
-            'LINK': url,
+            'LINK': driver.current_url,
             'FILE': None,
             'KEYWORD': None
         }
-        
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        
+
         # 제목 추출
-        title_elem = soup.find('div', class_='title')
-        if title_elem:
-            data['TITLE'] = title_elem.find('h3').text.strip() if title_elem.find('h3') else None
+        try:
+            title_elem = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".title h3"))
+            )
+            if title_elem:
+                data['TITLE'] = title_elem.text.strip()
+        except:
+            pass
+
+        # 카테고리(지원분야) 추출
+        try:
+            category_elems = driver.find_elements(By.CSS_SELECTOR, ".dot_list")
+            for elem in category_elems:
+                label = elem.find_element(By.CSS_SELECTOR, ".tit").text.strip()
+                if "지원분야" in label:
+                    value = elem.find_element(By.CSS_SELECTOR, ".txt").text.strip()
+                    data['CATEGORY'] = value
+                    break
+        except:
+            pass
         
-        # 기본 정보 추출
-        info_lists = soup.find_all('ul', class_='dot_list-wrap')
-        for info_list in info_lists:
-            items = info_list.find_all('li')
-            for item in items:
-                label = item.find('p', class_='tit')
-                value = item.find('p', class_='txt')
-                if label and value:
-                    label_text = label.text.strip()
-                    value_text = value.text.strip()
-                    
-                    if '지원분야' in label_text:
-                        data['CATEGORY'] = value_text
-                    elif '기관명' in label_text:
-                        data['AGENCY'] = value_text
-                    elif '접수기간' in label_text:
-                        if '~' in value_text:
-                            start_date, end_date = value_text.split('~')
-                            data['START'] = start_date.strip()
-                            data['END'] = end_date.strip()
-        
-        # 내용 추출
-        content_elem = soup.find('div', class_='information_list-wrap')
-        if content_elem:
-            content_sections = content_elem.find_all('div', class_='information_list')
-            content_text = []
-            for section in content_sections:
-                title = section.find('p', class_='title')
-                content = section.find('div', class_='txt')
-                if title and content:
-                    content_text.append(f"{title.text.strip()}\n{content.text.strip()}")
-            data['CONTENT'] = '\n\n'.join(content_text)
-        
+        # CONTENT 추출
+        data['CONTENT'] = extract_clean_content(driver)
+
+        # 지역 추출
+        info_items = driver.find_elements(By.CSS_SELECTOR, '.dot_list')
+        for item in info_items:
+            try:
+                label = item.find_element(By.CSS_SELECTOR, '.tit').text.strip()
+                value = item.find_element(By.CSS_SELECTOR, '.txt').text.strip()
+                
+                if '지원분야' in label:
+                    data['CATEGORY'] = value
+                elif '기관명' in label:
+                    data['AGENCY'] = value
+                elif '지역' in label:
+                    data['LOCATION'] = simplify_location(value)
+            except:
+                continue
+
+        # 담당부서(AGENCY) 추출
+        try:
+            agency_elems = driver.find_elements(By.CSS_SELECTOR, ".dot_list")
+            for elem in agency_elems:
+                label = elem.find_element(By.CSS_SELECTOR, ".tit").text.strip()
+                if "담당부서" in label:
+                    value = elem.find_element(By.CSS_SELECTOR, ".txt").text.strip()
+                    data['AGENCY'] = value
+                    break
+        except:
+            pass
+
+        # 신청기간 추출
+        try:
+            period_elems = driver.find_elements(By.CSS_SELECTOR, ".dot_list")
+            for elem in period_elems:
+                label = elem.find_element(By.CSS_SELECTOR, ".tit").text.strip()
+                if "접수기간" in label:
+                    value = elem.find_element(By.CSS_SELECTOR, ".txt").text.strip()
+                    if '~' in value:
+                        start_date, end_date = value.split('~')
+                        data['START'] = start_date.split()[0].strip()  # 시간 제거
+                        data['END'] = end_date.split()[0].strip()  # 시간 제거
+                    break
+        except:
+            pass
+
+        # 사업개요(CONTENT) 추출
+        try:
+            content_elems = driver.find_elements(By.CSS_SELECTOR, ".information_list")
+            for elem in content_elems:
+                title = elem.find_element(By.CSS_SELECTOR, ".title").text.strip()
+                if "사업개요" in title:
+                    content = elem.find_element(By.CSS_SELECTOR, ".txt").text.strip()
+                    data['CONTENT'] = content
+                    break
+        except:
+            pass
+
         # 첨부파일 추출
-        files = []
-        file_elems = soup.find_all('a', class_='file_bg')
-        for elem in file_elems:
-            file_name = elem.get('title', '').replace('[첨부파일] ', '')
-            if file_name:
-                files.append(file_name)
-        data['FILE'] = ', '.join(files) if files else None
-        
+        try:
+            files = []
+            file_elems = driver.find_elements(By.CSS_SELECTOR, ".board_file .file_bg")
+            for elem in file_elems:
+                file_name = elem.get_attribute("title")
+                if file_name and file_name.startswith('[첨부파일] '):
+                    files.append(file_name.replace('[첨부파일] ', ''))
+            if files:
+                data['FILE'] = ', '.join(files)
+        except:
+            pass
+
         return data
-        
+
     except Exception as e:
         print(f"상세 페이지 데이터 추출 중 오류: {e}")
         return None
@@ -151,7 +206,7 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
     try:
         driver = setup_driver()
         page = start_page
-        
+
         while end_page is None or page <= end_page:
             if stop_crawling:
                 break
@@ -159,35 +214,36 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
             print(f"\n{'='*50}")
             print(f"현재 {page}페이지 크롤링 시작")
             
-            url = f"https://www.k-startup.go.kr/web/contents/bizpbanc-ongoing.do?page={page}&schStr=regist&pbancEndYn=N"
+            url = f"{base_url}?page={page}&schStr=regist&pbancEndYn=N"
             driver.get(url)
-            time.sleep(2)
             
+            # 페이지 로딩 대기
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice"))
+            )
+            
+            # BeautifulSoup으로 현재 페이지 파싱
             soup = BeautifulSoup(driver.page_source, 'html.parser')
-            items = soup.find_all('li', class_='notice')
-            
+            items = soup.select("li.notice")
+
             if not items:
                 print("더 이상 공고가 없습니다.")
                 break
-                
+
             print(f"찾은 공고 개수: {len(items)}")
             
             for item in items:
                 try:
-                    title_elem = item.find('div', class_='middle').find('div', class_='tit')
-                    title = title_elem.text.strip() if title_elem else None
+                    # 기본 정보 추출
+                    title = item.select_one(".middle .tit").text.strip()
                     
-                    # 날짜 및 기관 정보 추출
-                    info_spans = item.find_all('span', class_='list')
+                    # 등록일자 추출
+                    info_lists = item.select(".bottom .list")
                     post_date = None
-                    agency = None
-                    
-                    for span in info_spans:
-                        text = span.text.strip()
-                        if '등록일자' in text:
-                            post_date = text.replace('등록일자', '').strip()
-                        elif text and not agency:
-                            agency = text
+                    for info in info_lists:
+                        if "등록일자" in info.text:
+                            post_date = info.text.replace("등록일자", "").strip()
+                            break
                     
                     # 체크포인트 비교
                     if checkpoint.last_crawled:
@@ -197,33 +253,52 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                             stop_crawling = True
                             break
                     
-                    # 상세 페이지 링크 추출
-                    link = item.find('a')
-                    onclick = link.get('onclick', '')
-                    pbancSn = re.search(r"go_view\((\d+)\)", onclick)
+                    # href 추출 및 pbancSn 파싱
+                    link = item.select_one(".middle a")
+                    href = link.get('href', '')
+                    pbancSn = None
+                    
+                    if 'go_view' in href:
+                        match = re.search(r'go_view\((\d+)\)', href)
+                        if match:
+                            pbancSn = match.group(1)
                     
                     if pbancSn:
-                        detail_url = f"https://www.k-startup.go.kr/web/contents/bizpbanc-ongoing.do?schM=view&pbancSn={pbancSn.group(1)}&page={page}&schStr=regist&pbancEndYn=N"
-                        announcement_data = get_announcement_detail(driver, detail_url)
+                        detail_url = f"{base_url}?schM=view&pbancSn={pbancSn}&page={page}&schStr=regist&pbancEndYn=N"
+                        print(f"\n수집 시도: {title}")
+                        print(f"URL: {detail_url}")
+                        
+                        driver.get(detail_url)
+                        time.sleep(2)
+                        
+                        announcement_data = get_announcement_detail_selenium(driver)
                         
                         if announcement_data:
+                            # 목록 페이지에서 추가 정보 가져오기
+                            category = item.select_one(".top .flag").text.strip() if item.select_one(".top .flag") else None
+                            
                             announcement_data.update({
-                                'POSTDATE': post_date.replace('.', '-') if post_date else None,
-                                'AGENCY': agency,
+                                'POSTDATE': post_date,
+                                'CATEGORY': category,
                                 'LINK': detail_url
                             })
                             
                             if len(announcements) == 0:
-                                print(f"체크포인트 저장: {post_date}, {title}")
                                 checkpoint.save_checkpoint(post_date, title)
                             
                             announcements.append(announcement_data)
                             print(f"수집 완료: {title}")
-                    
-                    time.sleep(1)
-                    
+                        
+                        # 목록 페이지로 복귀
+                        driver.get(url)
+                        WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice"))
+                        )
+                
                 except Exception as e:
                     print(f"공고 처리 중 오류: {e}")
+                    driver.get(url)
+                    time.sleep(2)
                     continue
             
             print(f"{page}페이지 완료 - {len(announcements)}건 수집")
@@ -237,6 +312,79 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
     
     return announcements
 
+def extract_clean_content(driver):
+    """상세 내용을 추출하고 정제하는 함수"""
+    try:
+        content_parts = []
+        
+        # information_list-wrap 내의 모든 섹션 찾기
+        sections = driver.find_elements(By.CSS_SELECTOR, ".information_list")
+        
+        for section in sections:
+            try:
+                # 섹션 제목 추출
+                title = section.find_element(By.CSS_SELECTOR, ".title").text.strip()
+                content_parts.append(f"[{title}]")
+                
+                # 각 항목 추출
+                items = section.find_elements(By.CSS_SELECTOR, ".dot_list")
+                for item in items:
+                    try:
+                        # 항목 제목과 내용 추출
+                        label_elem = item.find_element(By.CSS_SELECTOR, ".tit")
+                        if label_elem:
+                            label = label_elem.text.strip()
+                            
+                            # 내용이 있는 경우에만 추가
+                            if not label.startswith('자세한 내용은') and not label.startswith('제출하신 서류는') and not label.startswith('신청 시 요청하는'):
+                                content_text = ""
+                                
+                                # txt 클래스에서 텍스트 추출
+                                try:
+                                    txt_elem = item.find_element(By.CSS_SELECTOR, ".txt")
+                                    content_text = txt_elem.text.strip()
+                                except:
+                                    pass
+                                
+                                # list 클래스에서 텍스트 추출
+                                try:
+                                    list_elem = item.find_element(By.CSS_SELECTOR, ".list")
+                                    if not content_text:
+                                        content_text = list_elem.text.strip()
+                                    else:
+                                        content_text += "\n" + list_elem.text.strip()
+                                except:
+                                    pass
+                                
+                                if content_text:
+                                    # 온라인 접수 링크 제거
+                                    content_text = re.sub(r'온라인 접수 : 접수 바로가기', '', content_text)
+                                    content_text = content_text.strip()
+                                    
+                                    if content_text and content_text != "없음":
+                                        content_parts.append(f"● {label}: {content_text}")
+                    except:
+                        continue
+                
+                content_parts.append("")  # 섹션 사이 빈 줄 추가
+                
+            except:
+                continue
+        
+        # 최종 내용 정리
+        content = "\n".join(content_parts)
+        
+        # 정제 작업
+        content = content.replace("\t", " ")  # 탭 제거
+        content = re.sub(r'\n\s*\n', '\n\n', content)  # 연속된 빈 줄 정리
+        content = re.sub(r' +', ' ', content)  # 연속된 공백 정리
+        content = content.strip()  # 앞뒤 공백 제거
+        
+        return content
+        
+    except Exception as e:
+        print(f"내용 추출 중 오류 발생: {e}")
+        return None
 
 
 def extract_date(date_str):
@@ -357,15 +505,13 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
+
 class CrawlerCheckpoint:
     def __init__(self, site_name):
         self.site_name = site_name
-        # 현재 스크립트의 상위 디렉토리(ALRIMI)를 기준으로 경로 설정
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.checkpoint_file = os.path.join(base_dir, 'checkpoints', f'{site_name}_last_crawled.json')
-        #print(f"체크포인트 파일 경로: {self.checkpoint_file}")  # 디버깅용
+        self.checkpoint_file = f'checkpoints/{site_name}_last_crawled.json'
         self.last_crawled = self.load_checkpoint()
-
+        
     def load_checkpoint(self):
         """체크포인트 파일 로드"""
         if not os.path.exists('checkpoints'):
@@ -445,10 +591,38 @@ def insert_into_db(connection, announcements):
         """
         
         for announcement in announcements:
-            # CONTENT 길이 제한 (5000자)
+            # 각 필드에 대해 길이 제한 설정
+            announcement_number = announcement.get('ANNOUNCEMENT_NUMBER')
+            if announcement_number and len(announcement_number) > 50:
+                announcement_number = announcement_number[:50]
+
+            title = announcement.get('TITLE')
+            if title and len(title) > 300:
+                title = title[:300]
+
+            category = announcement.get('CATEGORY')
+            if category and len(category) > 20:
+                category = category[:20]
+
             content = announcement.get('CONTENT')
             if content and len(content) > 4000:
                 content = content[:4000]
+
+            start = announcement.get('START')
+            if start and len(start) > 10:
+                start = start[:10]
+
+            agency = announcement.get('AGENCY')
+            if agency and len(agency) > 100:
+                agency = agency[:100]
+
+            link = announcement.get('LINK')
+            if link and len(link) > 300:
+                link = link[:300]
+
+            keyword = announcement.get('KEYWORD')
+            if keyword and len(keyword) > 100:
+                keyword = keyword[:100]
 
             file = announcement.get('FILE')
             if file and len(file) > 200:
@@ -456,20 +630,21 @@ def insert_into_db(connection, announcements):
 
             values = (
                 announcement.get('POSTDATE'),
-                announcement.get('ANNOUNCEMENT_NUMBER'),
-                announcement.get('TITLE'),
-                announcement.get('CATEGORY'),
+                announcement_number,
+                title,
+                category,
                 announcement.get('LOCATION'),
                 content,
-                announcement.get('START'),
+                start,
                 announcement.get('END'),
-                announcement.get('AGENCY'),
-                announcement.get('LINK'),
+                agency,
+                link,
                 file,
-                announcement.get('KEYWORD')
+                keyword
             )
             
             cursor.execute(insert_query, values)
+
         
         connection.commit()
         print(f"{len(announcements)}개의 공고가 DB에 저장되었습니다.")
@@ -484,4 +659,3 @@ def insert_into_db(connection, announcements):
 
 if __name__ == "__main__":
     run()
-    #main()

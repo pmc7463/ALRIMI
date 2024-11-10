@@ -28,8 +28,8 @@ def run():
     base_url = "https://www.iris.go.kr/contents/retrieveBsnsAncmBtinSituListView.do"
     
     # 데이터 수집
-    announcements = get_announcement_list(base_url, start_page=1, end_page=1)
-    #announcements = get_announcement_list(base_url, start_page=1, end_page=None)
+    #announcements = get_announcement_list(base_url, start_page=1, end_page=1)
+    announcements = get_announcement_list(base_url, start_page=1, end_page=None)
 
     print("\n최종 결과:")
     print(f"총 {len(announcements)}개의 공고 수집 완료")
@@ -495,10 +495,38 @@ def insert_into_db(connection, announcements):
         """
         
         for announcement in announcements:
-            # CONTENT 길이 제한 (5000자)
+            # 각 필드에 대해 길이 제한 설정
+            announcement_number = announcement.get('ANNOUNCEMENT_NUMBER')
+            if announcement_number and len(announcement_number) > 50:
+                announcement_number = announcement_number[:50]
+
+            title = announcement.get('TITLE')
+            if title and len(title) > 300:
+                title = title[:300]
+
+            category = announcement.get('CATEGORY')
+            if category and len(category) > 20:
+                category = category[:20]
+
             content = announcement.get('CONTENT')
             if content and len(content) > 4000:
                 content = content[:4000]
+
+            start = announcement.get('START')
+            if start and len(start) > 10:
+                start = start[:10]
+
+            agency = announcement.get('AGENCY')
+            if agency and len(agency) > 100:
+                agency = agency[:100]
+
+            link = announcement.get('LINK')
+            if link and len(link) > 300:
+                link = link[:300]
+
+            keyword = announcement.get('KEYWORD')
+            if keyword and len(keyword) > 100:
+                keyword = keyword[:100]
 
             file = announcement.get('FILE')
             if file and len(file) > 200:
@@ -506,17 +534,17 @@ def insert_into_db(connection, announcements):
 
             values = (
                 announcement.get('POSTDATE'),
-                announcement.get('ANNOUNCEMENT_NUMBER'),
-                announcement.get('TITLE'),
-                announcement.get('CATEGORY'),
+                announcement_number,
+                title,
+                category,
                 announcement.get('LOCATION'),
                 content,
-                announcement.get('START'),
+                start,
                 announcement.get('END'),
-                announcement.get('AGENCY'),
-                announcement.get('LINK'),
+                agency,
+                link,
                 file,
-                announcement.get('KEYWORD')
+                keyword
             )
             
             cursor.execute(insert_query, values)
