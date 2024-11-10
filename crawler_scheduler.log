@@ -61,3 +61,161 @@
 2024-11-10 15:42:22,492 - __main__ - INFO - 중소벤처기업부 크롤러 완료
 2024-11-10 15:42:22,492 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='15', minute='42'], next run at: 2024-11-11 15:42:00 KST)" executed successfully
 2024-11-10 15:43:12,087 - __main__ - INFO - 스케줄러 종료
+2024-11-10 17:05:24,298 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:05:24,298 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 17:05:24,298 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:05:24,298 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 17:05:24,299 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:05:24,299 - __main__ - INFO - 창조경제혁신센터 크롤러 스케줄 등록 완료
+2024-11-10 17:05:24,299 - __main__ - INFO - 스케줄러 시작
+2024-11-10 17:05:24,299 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 17:05:24,299 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 17:05:24,299 - apscheduler.scheduler - INFO - Added job "창조경제혁신센터 Crawler" to job store "default"
+2024-11-10 17:05:24,299 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 17:06:00,000 - apscheduler.executors.default - INFO - Running job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='6'], next run at: 2024-11-10 17:06:00 KST)" (scheduled at 2024-11-10 17:06:00+09:00)
+2024-11-10 17:06:00,001 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 시작
+2024-11-10 17:06:00,002 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='6'], next run at: 2024-11-10 17:06:00 KST)" (scheduled at 2024-11-10 17:06:00+09:00)
+2024-11-10 17:06:00,003 - apscheduler.executors.default - INFO - Running job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='6'], next run at: 2024-11-10 17:06:00 KST)" (scheduled at 2024-11-10 17:06:00+09:00)
+2024-11-10 17:06:00,003 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 17:06:00,003 - __main__ - INFO - 창조경제혁신센터 크롤러 시작
+2024-11-10 17:06:00,382 - WDM - INFO - ====== WebDriver manager ======
+2024-11-10 17:06:00,460 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:06:00,617 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:06:00,715 - WDM - INFO - Driver [/home/pmc/.wdm/drivers/chromedriver/linux64/130.0.6723.116/chromedriver-linux64/chromedriver] found in cache
+2024-11-10 17:06:02,862 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 완료
+2024-11-10 17:06:02,863 - apscheduler.executors.default - INFO - Job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='6'], next run at: 2024-11-11 17:06:00 KST)" executed successfully
+2024-11-10 17:06:03,621 - __main__ - INFO - 중소벤처기업부 크롤러 완료
+2024-11-10 17:06:03,622 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='6'], next run at: 2024-11-11 17:06:00 KST)" executed successfully
+2024-11-10 17:06:03,753 - __main__ - INFO - 창조경제혁신센터 크롤러 완료
+2024-11-10 17:06:03,753 - apscheduler.executors.default - INFO - Job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='6'], next run at: 2024-11-11 17:06:00 KST)" executed successfully
+2024-11-10 17:06:46,157 - __main__ - INFO - 스케줄러 종료
+2024-11-10 17:08:04,959 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:08:04,960 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 17:08:04,960 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:08:04,960 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 17:08:04,960 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:08:04,960 - __main__ - INFO - 창조경제혁신센터 크롤러 스케줄 등록 완료
+2024-11-10 17:08:04,960 - __main__ - INFO - 스케줄러 시작
+2024-11-10 17:08:04,961 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 17:08:04,961 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 17:08:04,961 - apscheduler.scheduler - INFO - Added job "창조경제혁신센터 Crawler" to job store "default"
+2024-11-10 17:08:04,961 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 17:10:12,727 - __main__ - INFO - 스케줄러 종료
+2024-11-10 17:10:19,789 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:10:19,789 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 17:10:19,789 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:10:19,789 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 17:10:19,789 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:10:19,789 - __main__ - INFO - 창조경제혁신센터 크롤러 스케줄 등록 완료
+2024-11-10 17:10:19,789 - __main__ - INFO - 스케줄러 시작
+2024-11-10 17:10:19,790 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 17:10:19,790 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 17:10:19,790 - apscheduler.scheduler - INFO - Added job "창조경제혁신센터 Crawler" to job store "default"
+2024-11-10 17:10:19,790 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 17:12:23,091 - __main__ - INFO - 스케줄러 종료
+2024-11-10 17:12:51,312 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:12:51,313 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 17:12:51,313 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:12:51,313 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 17:12:51,313 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:12:51,313 - __main__ - INFO - 창조경제혁신센터 크롤러 스케줄 등록 완료
+2024-11-10 17:12:51,313 - __main__ - INFO - 스케줄러 시작
+2024-11-10 17:12:51,313 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 17:12:51,314 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 17:12:51,314 - apscheduler.scheduler - INFO - Added job "창조경제혁신센터 Crawler" to job store "default"
+2024-11-10 17:12:51,314 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 17:13:00,001 - apscheduler.executors.default - INFO - Running job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='13'], next run at: 2024-11-10 17:13:00 KST)" (scheduled at 2024-11-10 17:13:00+09:00)
+2024-11-10 17:13:00,002 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='13'], next run at: 2024-11-10 17:13:00 KST)" (scheduled at 2024-11-10 17:13:00+09:00)
+2024-11-10 17:13:00,002 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 시작
+2024-11-10 17:13:00,003 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 17:13:00,003 - apscheduler.executors.default - INFO - Running job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='13'], next run at: 2024-11-10 17:13:00 KST)" (scheduled at 2024-11-10 17:13:00+09:00)
+2024-11-10 17:13:00,005 - __main__ - INFO - 창조경제혁신센터 크롤러 시작
+2024-11-10 17:13:00,365 - WDM - INFO - ====== WebDriver manager ======
+2024-11-10 17:13:00,446 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:13:00,602 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:13:00,693 - WDM - INFO - Driver [/home/pmc/.wdm/drivers/chromedriver/linux64/130.0.6723.116/chromedriver-linux64/chromedriver] found in cache
+2024-11-10 17:13:21,689 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 완료
+2024-11-10 17:13:21,690 - apscheduler.executors.default - INFO - Job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='13'], next run at: 2024-11-11 17:13:00 KST)" executed successfully
+2024-11-10 17:13:22,611 - __main__ - INFO - 중소벤처기업부 크롤러 완료
+2024-11-10 17:13:22,611 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='13'], next run at: 2024-11-11 17:13:00 KST)" executed successfully
+2024-11-10 17:13:51,777 - __main__ - INFO - 창조경제혁신센터 크롤러 완료
+2024-11-10 17:13:51,777 - apscheduler.executors.default - INFO - Job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='13'], next run at: 2024-11-11 17:13:00 KST)" executed successfully
+2024-11-10 17:17:18,696 - __main__ - INFO - 스케줄러 종료
+2024-11-10 17:54:31,036 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:54:31,036 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 17:54:31,036 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:54:31,036 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 17:54:31,036 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:54:31,036 - __main__ - INFO - 창조경제혁신센터 크롤러 스케줄 등록 완료
+2024-11-10 17:54:31,036 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:54:31,036 - __main__ - INFO - iris 크롤러 스케줄 등록 완료
+2024-11-10 17:54:31,036 - __main__ - INFO - 스케줄러 시작
+2024-11-10 17:54:31,037 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 17:54:31,037 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 17:54:31,037 - apscheduler.scheduler - INFO - Added job "창조경제혁신센터 Crawler" to job store "default"
+2024-11-10 17:54:31,037 - apscheduler.scheduler - INFO - Added job "iris Crawler" to job store "default"
+2024-11-10 17:54:31,037 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 17:55:00,000 - apscheduler.executors.default - INFO - Running job "iris Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-10 17:55:00 KST)" (scheduled at 2024-11-10 17:55:00+09:00)
+2024-11-10 17:55:00,001 - __main__ - INFO - iris 크롤러 시작
+2024-11-10 17:55:00,001 - apscheduler.executors.default - INFO - Running job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-10 17:55:00 KST)" (scheduled at 2024-11-10 17:55:00+09:00)
+2024-11-10 17:55:00,002 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 시작
+2024-11-10 17:55:00,003 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-10 17:55:00 KST)" (scheduled at 2024-11-10 17:55:00+09:00)
+2024-11-10 17:55:00,004 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 17:55:00,004 - apscheduler.executors.default - INFO - Running job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-10 17:55:00 KST)" (scheduled at 2024-11-10 17:55:00+09:00)
+2024-11-10 17:55:00,009 - __main__ - INFO - 창조경제혁신센터 크롤러 시작
+2024-11-10 17:55:00,373 - WDM - INFO - ====== WebDriver manager ======
+2024-11-10 17:55:00,374 - WDM - INFO - ====== WebDriver manager ======
+2024-11-10 17:55:00,454 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:55:00,456 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:55:00,624 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:55:00,626 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:55:00,753 - WDM - INFO - Driver [/home/pmc/.wdm/drivers/chromedriver/linux64/130.0.6723.116/chromedriver-linux64/chromedriver] found in cache
+2024-11-10 17:55:00,754 - WDM - INFO - Driver [/home/pmc/.wdm/drivers/chromedriver/linux64/130.0.6723.116/chromedriver-linux64/chromedriver] found in cache
+2024-11-10 17:55:21,533 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 완료
+2024-11-10 17:55:21,535 - apscheduler.executors.default - INFO - Job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-11 17:55:00 KST)" executed successfully
+2024-11-10 17:55:22,618 - __main__ - INFO - 중소벤처기업부 크롤러 완료
+2024-11-10 17:55:22,619 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-11 17:55:00 KST)" executed successfully
+2024-11-10 17:55:51,952 - __main__ - INFO - 창조경제혁신센터 크롤러 완료
+2024-11-10 17:55:51,952 - apscheduler.executors.default - INFO - Job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-11 17:55:00 KST)" executed successfully
+2024-11-10 17:55:53,884 - __main__ - INFO - iris 크롤러 완료
+2024-11-10 17:55:53,884 - apscheduler.executors.default - INFO - Job "iris Crawler (trigger: cron[hour='17', minute='55'], next run at: 2024-11-11 17:55:00 KST)" executed successfully
+2024-11-10 17:57:00,711 - __main__ - INFO - 스케줄러 종료
+2024-11-10 17:57:06,768 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:57:06,768 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 17:57:06,769 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:57:06,769 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 17:57:06,769 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:57:06,769 - __main__ - INFO - 창조경제혁신센터 크롤러 스케줄 등록 완료
+2024-11-10 17:57:06,769 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 17:57:06,769 - __main__ - INFO - iris 크롤러 스케줄 등록 완료
+2024-11-10 17:57:06,769 - __main__ - INFO - 스케줄러 시작
+2024-11-10 17:57:06,770 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 17:57:06,770 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 17:57:06,770 - apscheduler.scheduler - INFO - Added job "창조경제혁신센터 Crawler" to job store "default"
+2024-11-10 17:57:06,770 - apscheduler.scheduler - INFO - Added job "iris Crawler" to job store "default"
+2024-11-10 17:57:06,770 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 17:58:00,001 - apscheduler.executors.default - INFO - Running job "iris Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-10 17:58:00 KST)" (scheduled at 2024-11-10 17:58:00+09:00)
+2024-11-10 17:58:00,001 - __main__ - INFO - iris 크롤러 시작
+2024-11-10 17:58:00,002 - apscheduler.executors.default - INFO - Running job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-10 17:58:00 KST)" (scheduled at 2024-11-10 17:58:00+09:00)
+2024-11-10 17:58:00,003 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 시작
+2024-11-10 17:58:00,003 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-11 17:58:00 KST)" (scheduled at 2024-11-10 17:58:00+09:00)
+2024-11-10 17:58:00,005 - apscheduler.executors.default - INFO - Running job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-10 17:58:00 KST)" (scheduled at 2024-11-10 17:58:00+09:00)
+2024-11-10 17:58:00,005 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 17:58:00,006 - __main__ - INFO - 창조경제혁신센터 크롤러 시작
+2024-11-10 17:58:00,340 - WDM - INFO - ====== WebDriver manager ======
+2024-11-10 17:58:00,343 - WDM - INFO - ====== WebDriver manager ======
+2024-11-10 17:58:00,419 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:58:00,422 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:58:00,570 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:58:00,585 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-11-10 17:58:00,657 - WDM - INFO - Driver [/home/pmc/.wdm/drivers/chromedriver/linux64/130.0.6723.116/chromedriver-linux64/chromedriver] found in cache
+2024-11-10 17:58:00,685 - WDM - INFO - Driver [/home/pmc/.wdm/drivers/chromedriver/linux64/130.0.6723.116/chromedriver-linux64/chromedriver] found in cache
+2024-11-10 17:58:21,478 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 완료
+2024-11-10 17:58:21,479 - apscheduler.executors.default - INFO - Job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-11 17:58:00 KST)" executed successfully
+2024-11-10 17:58:22,667 - __main__ - INFO - 중소벤처기업부 크롤러 완료
+2024-11-10 17:58:22,669 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-11 17:58:00 KST)" executed successfully
+2024-11-10 17:58:51,614 - __main__ - INFO - 창조경제혁신센터 크롤러 완료
+2024-11-10 17:58:51,614 - apscheduler.executors.default - INFO - Job "창조경제혁신센터 Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-11 17:58:00 KST)" executed successfully
+2024-11-10 17:58:53,143 - __main__ - INFO - iris 크롤러 완료
+2024-11-10 17:58:53,144 - apscheduler.executors.default - INFO - Job "iris Crawler (trigger: cron[hour='17', minute='58'], next run at: 2024-11-11 17:58:00 KST)" executed successfully
+2024-11-10 18:29:17,449 - __main__ - INFO - 스케줄러 종료
