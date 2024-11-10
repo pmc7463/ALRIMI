@@ -1,0 +1,20 @@
+2024-11-10 14:08:57,616 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 14:08:57,616 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료 (매일 오전 9시 실행)
+2024-11-10 14:08:57,616 - __main__ - INFO - 스케줄러 시작
+2024-11-10 14:08:57,617 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 14:08:57,617 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 14:09:00,001 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='14', minute='9'], next run at: 2024-11-10 14:09:00 KST)" (scheduled at 2024-11-10 14:09:00+09:00)
+2024-11-10 14:09:00,001 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 14:09:00,002 - __main__ - ERROR - 중소벤처기업부 크롤링 중 오류 발생: No module named 'crawlers'
+2024-11-10 14:09:00,002 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='14', minute='9'], next run at: 2024-11-11 14:09:00 KST)" executed successfully
+2024-11-10 14:09:22,932 - __main__ - INFO - 스케줄러 종료
+2024-11-10 14:09:41,495 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 14:09:41,495 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료 (매일 오전 9시 실행)
+2024-11-10 14:09:41,495 - __main__ - INFO - 스케줄러 시작
+2024-11-10 14:09:41,496 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 14:09:41,496 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 14:10:00,001 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='14', minute='10'], next run at: 2024-11-10 14:10:00 KST)" (scheduled at 2024-11-10 14:10:00+09:00)
+2024-11-10 14:10:00,001 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 14:10:22,260 - __main__ - INFO - 중소벤처기업부 크롤러 완료
+2024-11-10 14:10:22,260 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='14', minute='10'], next run at: 2024-11-11 14:10:00 KST)" executed successfully
+2024-11-10 14:14:05,499 - __main__ - INFO - 스케줄러 종료
