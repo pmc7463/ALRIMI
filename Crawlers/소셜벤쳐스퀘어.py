@@ -17,8 +17,8 @@ from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 
-#def run():
-def main():
+def run():
+#def main():
 
     """크롤러 메인 함수"""
     # 실행 전 체크포인트 확인
@@ -468,5 +468,5 @@ def insert_into_db(connection, announcements):
             cursor.close()
 
 if __name__ == "__main__":
-    #run()
-    main()
+    run()
+    #main()

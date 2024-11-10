@@ -18,3 +18,46 @@
 2024-11-10 14:10:22,260 - __main__ - INFO - 중소벤처기업부 크롤러 완료
 2024-11-10 14:10:22,260 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='14', minute='10'], next run at: 2024-11-11 14:10:00 KST)" executed successfully
 2024-11-10 14:14:05,499 - __main__ - INFO - 스케줄러 종료
+2024-11-10 15:37:06,097 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 15:37:06,097 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 15:37:06,098 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 15:37:06,098 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 15:37:06,098 - __main__ - INFO - 스케줄러 시작
+2024-11-10 15:37:06,098 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 15:37:06,098 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 15:37:06,098 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 15:38:00,001 - apscheduler.executors.default - INFO - Running job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='15', minute='38'], next run at: 2024-11-10 15:38:00 KST)" (scheduled at 2024-11-10 15:38:00+09:00)
+2024-11-10 15:38:00,002 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 시작
+2024-11-10 15:38:00,002 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='15', minute='38'], next run at: 2024-11-10 15:38:00 KST)" (scheduled at 2024-11-10 15:38:00+09:00)
+2024-11-10 15:38:00,003 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 15:38:00,385 - __main__ - ERROR - 소셜벤쳐스퀘어 크롤링 중 오류 발생: module 'Crawlers.소셜벤쳐스퀘어' has no attribute 'run'
+2024-11-10 15:38:00,386 - apscheduler.executors.default - INFO - Job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='15', minute='38'], next run at: 2024-11-11 15:38:00 KST)" executed successfully
+2024-11-10 15:38:22,511 - __main__ - INFO - 중소벤처기업부 크롤러 완료
+2024-11-10 15:38:22,511 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='15', minute='38'], next run at: 2024-11-11 15:38:00 KST)" executed successfully
+2024-11-10 15:41:02,306 - __main__ - INFO - 스케줄러 종료
+2024-11-10 15:41:15,773 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 15:41:15,773 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 15:41:15,773 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 15:41:15,773 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 15:41:15,773 - __main__ - INFO - 스케줄러 시작
+2024-11-10 15:41:15,774 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 15:41:15,774 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 15:41:15,774 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 15:41:21,547 - __main__ - INFO - 스케줄러 종료
+2024-11-10 15:41:27,704 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 15:41:27,704 - __main__ - INFO - 중소벤처기업부 크롤러 스케줄 등록 완료
+2024-11-10 15:41:27,704 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2024-11-10 15:41:27,704 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 스케줄 등록 완료
+2024-11-10 15:41:27,704 - __main__ - INFO - 스케줄러 시작
+2024-11-10 15:41:27,705 - apscheduler.scheduler - INFO - Added job "중소벤처기업부 Crawler" to job store "default"
+2024-11-10 15:41:27,705 - apscheduler.scheduler - INFO - Added job "소셜벤쳐스퀘어 Crawler" to job store "default"
+2024-11-10 15:41:27,705 - apscheduler.scheduler - INFO - Scheduler started
+2024-11-10 15:42:00,001 - apscheduler.executors.default - INFO - Running job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='15', minute='42'], next run at: 2024-11-10 15:42:00 KST)" (scheduled at 2024-11-10 15:42:00+09:00)
+2024-11-10 15:42:00,002 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 시작
+2024-11-10 15:42:00,002 - apscheduler.executors.default - INFO - Running job "중소벤처기업부 Crawler (trigger: cron[hour='15', minute='42'], next run at: 2024-11-10 15:42:00 KST)" (scheduled at 2024-11-10 15:42:00+09:00)
+2024-11-10 15:42:00,003 - __main__ - INFO - 중소벤처기업부 크롤러 시작
+2024-11-10 15:42:21,571 - __main__ - INFO - 소셜벤쳐스퀘어 크롤러 완료
+2024-11-10 15:42:21,571 - apscheduler.executors.default - INFO - Job "소셜벤쳐스퀘어 Crawler (trigger: cron[hour='15', minute='42'], next run at: 2024-11-11 15:42:00 KST)" executed successfully
+2024-11-10 15:42:22,492 - __main__ - INFO - 중소벤처기업부 크롤러 완료
+2024-11-10 15:42:22,492 - apscheduler.executors.default - INFO - Job "중소벤처기업부 Crawler (trigger: cron[hour='15', minute='42'], next run at: 2024-11-11 15:42:00 KST)" executed successfully
+2024-11-10 15:43:12,087 - __main__ - INFO - 스케줄러 종료

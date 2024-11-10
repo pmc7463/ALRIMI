@@ -32,20 +32,20 @@ def main():
    scheduler = BlockingScheduler()
    
    # 크롤러 목록
-   sites = ['중소벤처기업부']  # 크롤러 파일명 (확장자 제외)
+   sites = ['중소벤처기업부', '소셜벤쳐스퀘어']  # 크롤러 파일명 (확장자 제외)
    
    for site in sites:
        # 매일 오전 9시에 실행
        scheduler.add_job(
            run_crawler, 
            'cron', 
-           hour=14,
-           minute=10,
+           hour=15,
+           minute=42,
            args=[site],
            id=f'{site}_crawler',
            name=f'{site} Crawler'
        )
-       logger.info(f"{site} 크롤러 스케줄 등록 완료 (매일 오전 9시 실행)")
+       logger.info(f"{site} 크롤러 스케줄 등록 완료")
    
    try:
        logger.info("스케줄러 시작")
