@@ -32,7 +32,7 @@ def main():
    scheduler = BlockingScheduler()
    
    # 크롤러 목록
-   sites = ['중소벤처기업부', '소셜벤쳐스퀘어', '창조경제혁신센터', 'iris']  # 크롤러 파일명 (확장자 제외)
+   sites = ['중소벤처기업부', '소셜벤쳐스퀘어', '창조경제혁신센터', 'iris', '기업마당']  # 크롤러 파일명 (확장자 제외)
    
    for site in sites:
        # 매일 오전 9시에 실행
