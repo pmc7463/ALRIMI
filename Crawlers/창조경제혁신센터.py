@@ -86,163 +86,230 @@ def setup_driver():
 def get_announcement_detail_selenium(driver):
     """Selenium을 사용한 상세 페이지 데이터 추출"""
     try:
-        # 기본 데이터 구조
         data = {
             'POSTDATE': None,
             'ANNOUNCEMENT_NUMBER': None,
             'TITLE': None,
             'CATEGORY': None,
-            'LOCATION': None,  # 에이전시 값이 들어갈 예정
+            'LOCATION': None,
             'CONTENT': None,
             'START': None,
             'END': None,
-            'AGENCY': None,  # 항상 None으로 처리
+            'AGENCY': None,
             'LINK': driver.current_url,
             'FILE': None,
             'KEYWORD': None
         }
         
-        # 기본 정보가 있는 테이블에서 정보 추출
-        table = WebDriverWait(driver, 10).until(
+        # 페이지 로딩 대기
+        WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, 'tb04'))
         )
         
-        # 제목
-        title_element = driver.find_element(By.CSS_SELECTOR, 'table.tb04 tr:first-child td')
-        if title_element:
-            data['TITLE'] = title_element.text.strip()
-            
-        # 지원사항 (카테고리)
         try:
-            category_element = driver.find_element(By.XPATH, "//th[contains(text(), '지원사항')]/following-sibling::td")
-            data['CATEGORY'] = category_element.text.strip()
-        except:
-            pass
+            # 제목 추출 (선택자 수정)
+            title_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'table.tb04 tr:first-child td'))
+            )
+            if title_element:
+                data['TITLE'] = title_element.text.strip()
+        except Exception as e:
+            print(f"제목 추출 중 오류: {e}")
             
-        # 프로그램 기간
+        # 정보 추출 개선
         try:
-            period_element = driver.find_element(By.XPATH, "//th[contains(text(), '프로그램 기간')]/following-sibling::td")
-            period = period_element.text.strip()
-            if '~' in period:
-                start_date, end_date = period.split('~')
-                data['START'] = start_date.strip().replace('.', '-')
-                data['END'] = end_date.strip().replace('.', '-')
-        except:
-            pass
+            table = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'tb04'))
+            )
+            rows = table.find_elements(By.TAG_NAME, 'tr')
             
-        # 내용
+            for row in rows:
+                try:
+                    th = row.find_element(By.TAG_NAME, 'th')
+                    td = row.find_element(By.TAG_NAME, 'td')
+                    header = th.text.strip()
+                    value = td.text.strip()
+                    
+                    if '지원사항' in header:
+                        data['CATEGORY'] = value
+                    elif '프로그램 기간' in header and '~' in value:
+                        dates = value.split('~')
+                        data['START'] = dates[0].strip().replace('.', '-')
+                        data['END'] = dates[1].strip().replace('.', '-')
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"정보 추출 중 오류: {e}")
+                
+        # 내용 추출
         try:
-            content_element = driver.find_element(By.CLASS_NAME, 'brd_viewer')
-            data['CONTENT'] = content_element.text.strip()
-        except:
-            pass
+            content_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'brd_viewer'))
+            )
+            if content_element:
+                content = content_element.text.strip()
+                data['CONTENT'] = clean_content(content)
+        except Exception as e:
+            print(f"내용 추출 중 오류: {e}")
             
-        # 첨부파일
+        # 첨부파일 추출
         try:
             files = []
-            file_elements = driver.find_elements(By.CSS_SELECTOR, '.vw_download .dwnname')
-            for element in file_elements:
-                files.append(element.text.strip())
+            file_elements = driver.find_elements(By.CSS_SELECTOR, '.vw_download a')
+            for file_elem in file_elements:
+                file_name = file_elem.text.strip()
+                if file_name and not file_name.startswith('다운로드'):
+                    files.append(file_name)
             if files:
                 data['FILE'] = ', '.join(files)
-        except:
-            pass
+        except Exception as e:
+            print(f"첨부파일 추출 중 오류: {e}")
             
         return data
         
     except Exception as e:
         print(f"상세 페이지 데이터 추출 중 오류: {e}")
         return None
-    
-# 공고 메인 페이지 크롤링 함수
+
 def get_announcement_list(base_url, start_page=1, end_page=None):
     checkpoint = CrawlerCheckpoint('CCEI')
     announcements = []
+    current_page = start_page
     stop_crawling = False
     
     try:
         driver = setup_driver()
-        page = start_page
+        driver.get(base_url)
+        time.sleep(3)
         
-        while end_page is None or page <= end_page:
-            if stop_crawling:
-                break
+        while not stop_crawling:
+            try:
+                print(f"\n현재 페이지: {current_page}")
                 
-            print(f"\n{'='*50}")
-            print(f"현재 {page}페이지 크롤링 시작")
-            
-            url = f"https://ccei.creativekorea.or.kr/service/business_list.do?page={page}"
-            driver.get(url)
-            time.sleep(2)
-            
-            # 목록 페이지 요소들 가져오기
-            rows = WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'table.tb03 tbody#list_body tr'))
-            )
-            print(f"찾은 행 개수: {len(rows)}")
-            
-            for idx, row in enumerate(rows, 1):
+                if current_page > 1:
+                    try:
+                        # JavaScript로 페이지 이동
+                        script = f"businessList({current_page})"
+                        driver.execute_script(script)
+                        time.sleep(3)
+                    except Exception as e:
+                        print(f"페이지 이동 중 오류: {e}")
+                        break
+                
+                # 테이블 존재 확인
                 try:
-                    # 새로운 요소 참조 가져오기
-                    row = driver.find_elements(By.CSS_SELECTOR, 'table.tb03 tbody#list_body tr')[idx-1]
+                    table = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, 'table.tb03'))
+                    )
+                except:
+                    print("더 이상 테이블이 없습니다.")
+                    break
+                
+                # 공고 목록 가져오기
+                rows = table.find_elements(By.CSS_SELECTOR, 'tbody#list_body tr')
+                if not rows:
+                    print("더 이상 공고가 없습니다.")
+                    break
                     
-                    # 기본 정보 추출
-                    title_element = row.find_element(By.CSS_SELECTOR, 'td:nth-child(3) a')
-                    title = title_element.text.strip()
-                    print(f"처리 중인 공고: {title}")
+                print(f"찾은 공고 개수: {len(rows)}")
+                
+                # 각 공고 처리
+                for idx, row in enumerate(rows):
+                    try:
+                        # 매 반복마다 rows 새로 가져오기
+                        current_rows = driver.find_elements(By.CSS_SELECTOR, 'table.tb03 tbody#list_body tr')
+                        if idx >= len(current_rows):
+                            break
+                        
+                        row = current_rows[idx]
+                        columns = row.find_elements(By.TAG_NAME, 'td')
+                        
+                        location = columns[1].text.strip()
+                        title = columns[2].text.strip()
+                        period = columns[4].text.strip()
+                        
+                        print(f"\n처리 중 ({current_page}페이지 {idx+1}/{len(rows)}): {title}")
+                        
+                        # 체크포인트 확인
+                        if checkpoint.last_crawled:
+                            if (period == checkpoint.last_crawled['last_post_date'] and 
+                                title == checkpoint.last_crawled['last_title']):
+                                print(f"\n이전 수집 지점 도달. 크롤링 중단")
+                                stop_crawling = True
+                                break
+                        
+                        # 상세 페이지로 이동
+                        link = columns[2].find_element(By.TAG_NAME, 'a')
+                        driver.execute_script("arguments[0].click();", link)
+                        time.sleep(3)
+                        
+                        # 상세 페이지 데이터 수집
+                        announcement_data = get_announcement_detail_selenium(driver)
+                        
+                        if announcement_data:
+                            announcement_data.update({
+                                'POSTDATE': period.split('~')[0].strip().replace('.', '-'),
+                                'LOCATION': location,
+                                'AGENCY': None
+                            })
+                            
+                            if len(announcements) == 0:
+                                checkpoint.save_checkpoint(period, title)
+                            
+                            announcements.append(announcement_data)
+                            print(f"수집 완료: {title}")
+                        
+                        # 목록 페이지로 복귀
+                        driver.back()
+                        time.sleep(3)
+                        
+                    except Exception as e:
+                        print(f"공고 처리 중 오류: {str(e)}")
+                        continue
+                
+                if stop_crawling:
+                    break
                     
-                    # 지역(에이전시) 추출 - LOCATION으로 사용됨
-                    location = row.find_element(By.CSS_SELECTOR, 'td:nth-child(2) span').text.strip()
-                    period = row.find_element(By.CSS_SELECTOR, 'td:nth-child(5)').text.strip()
+                # 다음 페이지 확인
+                try:
+                    next_page_exists = False
+                    paging = driver.find_element(By.ID, 'paging')
+                    links = paging.find_elements(By.TAG_NAME, 'a')
                     
-                    # 체크포인트 확인
-                    if checkpoint.last_crawled:
-                        if (period == checkpoint.last_crawled['last_post_date'] and 
-                            title == checkpoint.last_crawled['last_title']):
-                            print(f"\n이전 수집 지점 도달. 크롤링 중단")
-                            stop_crawling = True
+                    for link in links:
+                        onclick = link.get_attribute('onclick')
+                        if onclick and f'businessList({current_page + 1})' in onclick:
+                            next_page_exists = True
                             break
                     
-                    # 상세 페이지로 이동
-                    title_element.click()
-                    time.sleep(2)
-                    
-                    # 상세 페이지 데이터 수집
-                    announcement_data = get_announcement_detail_selenium(driver)
-                    if announcement_data:
-                        announcement_data.update({
-                            'POSTDATE': period.split('~')[0].strip().replace('.', '-'),
-                            'LOCATION': location,  # 에이전시 값을 LOCATION으로 사용
-                            'AGENCY': None,  # AGENCY는 None으로 처리
-                            'LINK': driver.current_url
-                        })
-                        announcements.append(announcement_data)
+                    if not next_page_exists:
+                        print("마지막 페이지입니다.")
+                        break
                         
-                        # 첫 번째 게시물 수집 후 체크포인트 저장
-                        if len(announcements) == 1:
-                            checkpoint.save_checkpoint(period, title)
-                    
-                    # 이전 페이지로 돌아가기
-                    driver.back()
-                    time.sleep(2)
+                    if end_page and current_page >= end_page:
+                        print(f"지정된 마지막 페이지({end_page})에 도달했습니다.")
+                        break
+                        
+                    current_page += 1
                     
                 except Exception as e:
-                    print(f"행 처리 중 오류: {e}")
-                    continue
-            
-            if len(rows) == 0:  # 더 이상 데이터가 없으면 종료
+                    print(f"페이징 처리 중 오류: {e}")
+                    break
+                    
+            except Exception as e:
+                print(f"페이지 처리 중 오류: {e}")
                 break
-                
-            print(f"{page}페이지 완료 - {len(announcements)}건 수집")
-            page += 1
-            
+    
     except Exception as e:
         print(f"크롤링 중 오류 발생: {e}")
     
     finally:
-        driver.quit()
-        
+        if driver:
+            driver.quit()
+    
+    print(f"\n수집 완료 - 총 {len(announcements)}건")
     return announcements
+
 
 def extract_date(date_str):
     """날짜 문자열을 YYYY-MM-DD 형식으로 변환"""

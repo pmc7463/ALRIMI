@@ -218,10 +218,14 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
             driver.get(url)
             
             # 페이지 로딩 대기
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice"))
-            )
-            
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice"))
+                )
+            except Exception as e:
+                print(f"페이지 로딩 시간 초과: {e}")
+                break
+
             # BeautifulSoup으로 현재 페이지 파싱
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             items = soup.select("li.notice")
@@ -234,16 +238,26 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
             
             for item in items:
                 try:
-                    # 기본 정보 추출
-                    title = item.select_one(".middle .tit").text.strip()
+                    # 제목 추출
+                    title_elem = item.select_one(".middle .tit")
+                    if not title_elem:
+                        print("제목 요소를 찾을 수 없음")
+                        continue
+                    title = title_elem.text.strip()
                     
                     # 등록일자 추출
-                    info_lists = item.select(".bottom .list")
                     post_date = None
+                    info_lists = item.select(".bottom .list")
                     for info in info_lists:
-                        if "등록일자" in info.text:
+                        if info and "등록일자" in info.text:
                             post_date = info.text.replace("등록일자", "").strip()
                             break
+                    
+                    if not post_date:
+                        print(f"등록일자를 찾을 수 없음: {title}")
+                        continue
+                    
+                    print(f"현재 처리 중: {post_date}, {title}")
                     
                     # 체크포인트 비교
                     if checkpoint.last_crawled:
@@ -253,52 +267,72 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                             stop_crawling = True
                             break
                     
-                    # href 추출 및 pbancSn 파싱
-                    link = item.select_one(".middle a")
-                    href = link.get('href', '')
-                    pbancSn = None
+                    # 링크 추출
+                    link_elem = item.select_one(".middle a")
+                    if not link_elem:
+                        print(f"링크 요소를 찾을 수 없음: {title}")
+                        continue
+                        
+                    # onclick 속성 추출 시도
+                    href = link_elem.get('href', '')
+                    if not href:
+                        onclick = link_elem.get('onclick', '')
+                        if not onclick:
+                            print(f"href와 onclick 속성 모두 없음: {title}")
+                            continue
+                        href = onclick
                     
-                    if 'go_view' in href:
-                        match = re.search(r'go_view\((\d+)\)', href)
-                        if match:
-                            pbancSn = match.group(1)
+                    # pbancSn 추출
+                    match = re.search(r'go_view\((\d+)\)', href)
+                    if not match:
+                        print(f"공고 ID를 찾을 수 없음: {href}")
+                        continue
+                        
+                    pbancSn = match.group(1)
+                    detail_url = f"{base_url}?schM=view&pbancSn={pbancSn}&page={page}&schStr=regist&pbancEndYn=N"
+                    print(f"\n수집 시도: {title}")
+                    print(f"URL: {detail_url}")
                     
-                    if pbancSn:
-                        detail_url = f"{base_url}?schM=view&pbancSn={pbancSn}&page={page}&schStr=regist&pbancEndYn=N"
-                        print(f"\n수집 시도: {title}")
-                        print(f"URL: {detail_url}")
+                    # 상세 페이지 이동
+                    driver.get(detail_url)
+                    time.sleep(2)
+                    
+                    announcement_data = get_announcement_detail_selenium(driver)
+                    
+                    if announcement_data:
+                        # 카테고리 추출
+                        category_elem = item.select_one(".top .flag")
+                        category = category_elem.text.strip() if category_elem else None
                         
-                        driver.get(detail_url)
-                        time.sleep(2)
+                        announcement_data.update({
+                            'POSTDATE': post_date,
+                            'CATEGORY': category,
+                            'LINK': detail_url
+                        })
                         
-                        announcement_data = get_announcement_detail_selenium(driver)
+                        if len(announcements) == 0:
+                            checkpoint.save_checkpoint(post_date, title)
                         
-                        if announcement_data:
-                            # 목록 페이지에서 추가 정보 가져오기
-                            category = item.select_one(".top .flag").text.strip() if item.select_one(".top .flag") else None
-                            
-                            announcement_data.update({
-                                'POSTDATE': post_date,
-                                'CATEGORY': category,
-                                'LINK': detail_url
-                            })
-                            
-                            if len(announcements) == 0:
-                                checkpoint.save_checkpoint(post_date, title)
-                            
-                            announcements.append(announcement_data)
-                            print(f"수집 완료: {title}")
-                        
-                        # 목록 페이지로 복귀
-                        driver.get(url)
+                        announcements.append(announcement_data)
+                        print(f"수집 완료: {title}")
+                    
+                    # 목록 페이지로 복귀
+                    driver.get(url)
+                    try:
                         WebDriverWait(driver, 10).until(
                             EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice"))
                         )
+                    except:
+                        print("목록 페이지 로딩 실패")
+                        continue
                 
                 except Exception as e:
                     print(f"공고 처리 중 오류: {e}")
-                    driver.get(url)
-                    time.sleep(2)
+                    try:
+                        driver.get(url)
+                        time.sleep(2)
+                    except:
+                        print("목록 페이지 복귀 실패")
                     continue
             
             print(f"{page}페이지 완료 - {len(announcements)}건 수집")
@@ -308,7 +342,8 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
         print(f"크롤링 중 오류 발생: {e}")
     
     finally:
-        driver.quit()
+        if driver:
+            driver.quit()
     
     return announcements
 

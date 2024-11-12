@@ -29,7 +29,7 @@ def run():
     
     # 데이터 수집
     #announcements = get_announcement_list(base_url, start_page=1, end_page=1)
-    announcements = get_announcement_list(base_url, start_page=1, end_page=None)
+    announcements = get_announcement_list(base_url, start_page=40, end_page=None)
 
     print("\n최종 결과:")
     print(f"총 {len(announcements)}개의 공고 수집 완료")
@@ -147,7 +147,7 @@ def get_announcement_detail(url, headers):
         
         # 첨부파일 추출 (있을 경우)
         files = []
-        file_area = board_view.find('div', class_='file_area')
+        file_area = soup.find('ul', class_='files')
         if file_area:
             for file_link in file_area.find_all('a'):
                 if file_link.get('href'):
@@ -180,7 +180,6 @@ def get_announcement_detail(url, headers):
     
 # 공고 메인 페이지 크롤링 함수
 def get_announcement_list(base_url, start_page=1, end_page=None):
-    # 체크포인트 초기화
     checkpoint = CrawlerCheckpoint('socialventure')
     announcements = []
     stop_crawling = False
@@ -194,14 +193,31 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
             print(f"\n{'='*50}")
             print(f"현재 {page}페이지 크롤링 시작")
             
-            url = f"{base_url}&pageIndex={page}"
-            response = requests.get(url, headers=headers)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # 공고 목록 테이블 찾기
-            table = soup.find('table', class_='boardList')
-            if table and table.find('tbody'):
-                rows = table.find('tbody').find_all('tr')
+            try:
+                # 목록 페이지 요청
+                url = f"{base_url}&pageIndex={page}"
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()  # HTTP 오류 체크
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # 테이블 찾기
+                table = soup.find('table', class_='boardList')
+                if not table:
+                    print("테이블을 찾을 수 없습니다.")
+                    break
+                    
+                tbody = table.find('tbody')
+                if not tbody:
+                    print("tbody를 찾을 수 없습니다.")
+                    break
+                    
+                rows = tbody.find_all('tr')
+                if not rows:
+                    print("더 이상 공고가 없습니다.")
+                    break
+                    
+                print(f"찾은 공고 개수: {len(rows)}")
                 
                 for row in rows:
                     try:
@@ -211,27 +227,60 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                             
                         # 기본 정보 추출
                         cells = row.find_all('td')
-                        title_link = cells[1].find('a')
+                        if len(cells) < 5:  # 필요한 최소 컬럼 수 체크
+                            print("컬럼 수가 부족합니다.")
+                            continue
+                            
+                        # 제목 추출
+                        title_cell = cells[1]
+                        title_link = title_cell.find('a')
+                        if not title_link:
+                            print("제목 링크를 찾을 수 없습니다.")
+                            continue
+                            
                         title = title_link.text.strip()
-                        agency = cells[2].text.strip()
-                        status = cells[3].text.strip()  # 모집상태
-                        reg_date = cells[4].text.strip()  # 게시일
+                        if not title:
+                            print("제목이 비어있습니다.")
+                            continue
+                            
+                        # 기타 정보 추출
+                        agency = cells[2].text.strip() if cells[2] else None
+                        status = cells[3].text.strip() if cells[3] else None  # 모집상태
+                        reg_date = cells[4].text.strip() if cells[4] else None  # 게시일
                         
-                        # 이전 수집 데이터와 비교
+                        if not all([agency, reg_date]):
+                            print("필수 정보가 누락되었습니다.")
+                            continue
+                            
+                        print(f"현재 처리 중: {reg_date}, {title}")
+                        
+                        # 체크포인트 비교
                         if checkpoint.last_crawled:
+                            print(f"저장된 체크포인트: {checkpoint.last_crawled['last_post_date']}, {checkpoint.last_crawled['last_title']}")
                             if (reg_date == checkpoint.last_crawled['last_post_date'] and 
                                 title == checkpoint.last_crawled['last_title']):
                                 print(f"\n이전 수집 지점 도달. 크롤링 중단")
                                 stop_crawling = True
                                 break
                         
-                        # 상세 페이지 URL 추출 및 데이터 수집
+                        # URL 추출
                         onclick = title_link.get('href', '')
-                        post_id = re.search(r"'(\d+)'", onclick)
-                        if post_id:
-                            post_id = post_id.group(1)
-                            detail_url = f"https://sv.kibo.or.kr/BoardExecute.do?pageid=BOARD00004&command=View&idx={post_id}"
+                        if not onclick:
+                            print(f"href 속성이 없음: {title}")
+                            continue
                             
+                        post_id_match = re.search(r"'(\d+)'", onclick)
+                        if not post_id_match:
+                            print(f"게시물 ID를 찾을 수 없음: {onclick}")
+                            continue
+                            
+                        post_id = post_id_match.group(1)
+                        detail_url = f"https://sv.kibo.or.kr/BoardExecute.do?pageid=BOARD00004&command=View&idx={post_id}"
+                        
+                        print(f"\n수집 시도: {title}")
+                        print(f"URL: {detail_url}")
+                        
+                        try:
                             announcement_data = get_announcement_detail(detail_url, headers)
                             if announcement_data:
                                 announcement_data.update({
@@ -239,26 +288,36 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                                     'AGENCY': agency,
                                     'LINK': detail_url
                                 })
-                                announcements.append(announcement_data)
                                 
-                                # 첫 번째 게시물 수집 후 체크포인트 저장
-                                if len(announcements) == 1:
-                                    print(f"첫 번째 게시물 수집 완료: {reg_date}, {title}")
+                                if len(announcements) == 0:
+                                    print(f"체크포인트 저장: {reg_date}, {title}")
                                     checkpoint.save_checkpoint(reg_date, title)
                                 
+                                announcements.append(announcement_data)
+                                print(f"수집 완료: {title}")
+                            
+                        except Exception as e:
+                            print(f"상세 페이지 처리 중 오류: {e}")
+                            continue
+                            
+                        time.sleep(1)  # 요청 간격 조절
+                        
                     except Exception as e:
                         print(f"게시물 처리 중 오류: {e}")
                         continue
-                        
-                    time.sleep(1)
-            
-            print(f"{page}페이지 완료 - {len(announcements)}건 수집")
-            time.sleep(2)
-            page += 1
+                
+                print(f"{page}페이지 완료 - {len(announcements)}건 수집")
+                time.sleep(2)
+                page += 1
+                
+            except requests.exceptions.RequestException as e:
+                print(f"페이지 요청 중 오류: {e}")
+                break
             
     except Exception as e:
         print(f"크롤링 중 오류 발생: {e}")
     
+    print(f"수집 완료 - 총 {len(announcements)}건")
     return announcements
 
 def extract_date(date_str):

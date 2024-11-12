@@ -39,8 +39,8 @@ def main():
        scheduler.add_job(
            run_crawler, 
            'cron', 
-           hour=17,
-           minute=58,
+           hour=00,
+           minute=33,
            args=[site],
            id=f'{site}_crawler',
            name=f'{site} Crawler'

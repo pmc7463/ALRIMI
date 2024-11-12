@@ -202,27 +202,42 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                 driver.get(url)
                 time.sleep(2)
                 
-                # 새로운 요소들 찾기
-                items = WebDriverWait(driver, 10).until(
-                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.dbody li'))
-                )
+                # 페이지 로딩 대기
+                try:
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '.dbody li'))
+                    )
+                except Exception as e:
+                    print(f"페이지 로딩 시간 초과: {e}")
+                    break
+
+                # BeautifulSoup으로 현재 페이지 파싱
+                soup = BeautifulSoup(driver.page_source, 'html.parser')
+                items = soup.select('.dbody li')
+
+                if not items:
+                    print("공고를 찾을 수 없습니다.")
+                    break
+
                 print(f"찾은 공고 개수: {len(items)}")
                 
-                for idx in range(len(items)):  # 인덱스로 순회
+                for idx, item in enumerate(items):
                     try:
-                        # 매번 새로 요소들을 찾음
-                        items = driver.find_elements(By.CSS_SELECTOR, '.dbody li')
-                        current_item = items[idx]
-                        
                         # 기관 정보 추출
-                        inst_elem = current_item.find_element(By.CSS_SELECTOR, '.inst_title')
-                        agencies = inst_elem.text.split(' > ')
-                        agency = agencies[-1].strip()
+                        inst_elem = item.select_one('.inst_title')
+                        if not inst_elem:
+                            print("기관 정보를 찾을 수 없음")
+                            continue
+                        agencies = inst_elem.text.strip().split(' > ')
+                        agency = agencies[-1].strip() if agencies else None
                         
                         # 기본 정보 추출
-                        info_div = current_item.find_element(By.CSS_SELECTOR, '.etc_info')
-                        spans = info_div.find_elements(By.CSS_SELECTOR, 'span')
-                        
+                        info_div = item.select_one('.etc_info')
+                        if not info_div:
+                            print("기본 정보를 찾을 수 없음")
+                            continue
+                            
+                        spans = info_div.select('span')
                         announcement_num = None
                         post_date = None
                         category = None
@@ -236,9 +251,16 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                             elif '공모유형' in text:
                                 category = text.split(':')[1].strip()
                         
-                        # 제목 추출
-                        title_elem = current_item.find_element(By.CSS_SELECTOR, '.title a')
+                        # 제목과 링크 추출
+                        title_elem = item.select_one('.title a')
+                        if not title_elem:
+                            print("제목 요소를 찾을 수 없음")
+                            continue
+                        
                         title = title_elem.text.strip()
+                        onclick = title_elem.get('onclick', '')
+                        
+                        print(f"현재 처리 중: {post_date}, {title}")
                         
                         # 체크포인트 비교
                         if checkpoint.last_crawled:
@@ -248,25 +270,31 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                                 stop_crawling = True
                                 break
                         
-                        # onclick 속성 값과 제목 저장
-                        onclick = title_elem.get_attribute('onclick')
-                        detail_id = re.search(r"f_bsnsAncmBtinSituListForm_view\('([^']+)'", onclick)
-                        
-                        if detail_id:
-                            detail_url = f"https://www.iris.go.kr/contents/retrieveBsnsAncmView.do?ancmId={detail_id.group(1)}"
+                        # 상세 페이지 ID 추출
+                        if not onclick:
+                            print(f"onclick 속성이 없음: {title}")
+                            continue
                             
-                            # 새 탭에서 상세 페이지 열기
+                        detail_id = re.search(r"f_bsnsAncmBtinSituListForm_view\('([^']+)'", onclick)
+                        if not detail_id:
+                            print(f"상세 페이지 ID를 찾을 수 없음: {onclick}")
+                            continue
+                        
+                        detail_url = f"https://www.iris.go.kr/contents/retrieveBsnsAncmView.do?ancmId={detail_id.group(1)}"
+                        print(f"\n수집 시도: {title}")
+                        print(f"URL: {detail_url}")
+                        
+                        # 새 탭에서 상세 페이지 열기
+                        try:
                             driver.execute_script(f"window.open('{detail_url}', '_blank');")
                             time.sleep(2)
                             
-                            # 새 탭으로 전환
                             driver.switch_to.window(driver.window_handles[-1])
                             
                             # 상세 페이지 데이터 수집
                             announcement_data = get_announcement_detail_selenium(driver)
                             
                             if announcement_data:
-                                # 목록에서 가져온 정보로 업데이트
                                 announcement_data.update({
                                     'POSTDATE': post_date.replace('.', '-') if post_date else None,
                                     'ANNOUNCEMENT_NUMBER': announcement_num,
@@ -275,26 +303,27 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                                     'AGENCY': agency,
                                 })
                                 
-                                # 첫 번째 게시물이면 체크포인트 저장
                                 if len(announcements) == 0:
-                                    print(f"체크포인트 저장: {post_date}, {title}")
                                     checkpoint.save_checkpoint(post_date, title)
                                 
                                 announcements.append(announcement_data)
                                 print(f"수집 완료: {title}")
                             
-                            # 상세 페이지 탭 닫기
-                            driver.close()
-                            # 원래 탭으로 돌아가기
-                            driver.switch_to.window(driver.window_handles[0])
-                            time.sleep(2)
+                        except Exception as e:
+                            print(f"상세 페이지 처리 중 오류: {e}")
+                        
+                        finally:
+                            # 상세 페이지 탭 닫기 및 원래 탭으로 복귀
+                            try:
+                                if len(driver.window_handles) > 1:
+                                    driver.close()
+                                    driver.switch_to.window(driver.window_handles[0])
+                                    time.sleep(2)
+                            except Exception as e:
+                                print(f"탭 전환 중 오류: {e}")
                     
                     except Exception as e:
-                        print(f"공고 처리 중 오류 발생: {e}")
-                        # 에러 발생 시 원래 탭으로 돌아가기 시도
-                        if len(driver.window_handles) > 1:
-                            driver.close()
-                            driver.switch_to.window(driver.window_handles[0])
+                        print(f"공고 처리 중 오류: {e}")
                         continue
                 
                 if stop_crawling:
@@ -312,7 +341,8 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
         print(f"크롤링 중 오류 발생: {e}")
     
     finally:
-        driver.quit()
+        if driver:
+            driver.quit()
     
     print(f"수집 완료 - 총 {len(announcements)}건")
     return announcements

@@ -183,82 +183,143 @@ def get_announcement_detail(url, headers):
     
 # 공고 메인 페이지 크롤링 함수
 def get_announcement_list(base_url, start_page=1, end_page=1):
-    # 체크포인트 초기화
+    """공고 목록 수집"""
     checkpoint = CrawlerCheckpoint('mss')
     announcements = []
     stop_crawling = False
     
     try:
         page = start_page
-        while end_page is None or page <= end_page: # end_page가 None이면 계속 진행
+        while end_page is None or page <= end_page:
             if stop_crawling:
                 break
                 
             print(f"\n{'='*50}")
             print(f"현재 {page}페이지 크롤링 시작")
             
-            url = f"{base_url}&pageIndex={page}"
-            response = requests.get(url, headers=headers)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            table = soup.find('table')
-            if table and table.find('tbody'):
-                rows = table.find('tbody').find_all('tr')
+            try:
+                url = f"{base_url}&pageIndex={page}"
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()  # HTTP 오류 체크
                 
-                for idx, row in enumerate(rows, 1):
+                soup = BeautifulSoup(response.text, 'html.parser')
+                table = soup.find('table')
+                
+                if not table:
+                    print("테이블을 찾을 수 없습니다.")
+                    break
+                    
+                tbody = table.find('tbody')
+                if not tbody:
+                    print("tbody를 찾을 수 없습니다.")
+                    break
+                    
+                rows = tbody.find_all('tr')
+                if not rows:
+                    print("더 이상 공고가 없습니다.")
+                    break
+                    
+                print(f"찾은 공고 개수: {len(rows)}")
+                
+                for row in rows:
                     try:
-                        reg_date = row.find_all('td')[6].text.strip()  # 등록일
-                        title = row.find('td', class_='subject').find('a').text.strip()
+                        # 기본 정보 추출
+                        tds = row.find_all('td')
+                        if len(tds) < 7:
+                            print("컬럼 수가 부족합니다.")
+                            continue
+                            
+                        reg_date = tds[6].text.strip() if tds[6] else None
+                        if not reg_date:
+                            print("등록일을 찾을 수 없습니다.")
+                            continue
+                            
+                        subject_td = row.find('td', class_='subject')
+                        if not subject_td:
+                            print("제목 칼럼을 찾을 수 없습니다.")
+                            continue
+                            
+                        title_link = subject_td.find('a')
+                        if not title_link:
+                            print("제목 링크를 찾을 수 없습니다.")
+                            continue
+                            
+                        title = title_link.text.strip()
+                        if not title:
+                            print("제목이 비어있습니다.")
+                            continue
+                            
+                        print(f"현재 처리 중: {reg_date}, {title}")
                         
-                        # checkpoint 파일이 있는 경우 비교
+                        # 체크포인트 비교
                         if checkpoint.last_crawled:
                             last_date = checkpoint.last_crawled['last_post_date']
                             last_title = checkpoint.last_crawled['last_title']
                             
-                            print(f"현재 게시물: {reg_date}, {title}")
-                            print(f"저장된 게시물: {last_date}, {last_title}")
+                            print(f"저장된 체크포인트: {last_date}, {last_title}")
                             
                             if reg_date == last_date and title == last_title:
                                 print(f"\n이전 수집 지점 도달. 크롤링 중단")
                                 stop_crawling = True
                                 break
                         
-                        # 첫 번째 게시물이면서 첫 페이지인 경우 체크포인트 업데이트
-                        if page == 1 and idx == 1:
-                            print(f"체크포인트 업데이트: {reg_date}, {title}")
+                        # 첫 번째 게시물 체크포인트 저장
+                        if page == 1 and len(announcements) == 0:
+                            print(f"체크포인트 저장: {reg_date}, {title}")
                             checkpoint.save_checkpoint(reg_date, title)
                         
-                        # 게시물 상세 정보 수집
-                        link_tag = row.find('td', class_='subject').find('a')
-                        if link_tag:
-                            onclick = link_tag.get('onclick', '')
-                            match = re.search(r"doBbsFView\('(\d+)',\s*'(\d+)'", onclick)
-                            if match:
-                                cbIdx, bcIdx = match.groups()
-                                detail_url = f"https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx={cbIdx}&bcIdx={bcIdx}&parentSeq={bcIdx}"
-                                
-                                announcement_data = get_announcement_detail(detail_url, headers)
-                                if announcement_data:
-                                    announcements.append(announcement_data)
-                                    
+                        # 상세 페이지 URL 구성
+                        onclick = title_link.get('onclick', '')
+                        if not onclick:
+                            print(f"onclick 속성이 없음: {title}")
+                            continue
+                            
+                        match = re.search(r"doBbsFView\('(\d+)',\s*'(\d+)'", onclick)
+                        if not match:
+                            print(f"URL 파라미터를 찾을 수 없음: {onclick}")
+                            continue
+                            
+                        cbIdx, bcIdx = match.groups()
+                        detail_url = f"https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx={cbIdx}&bcIdx={bcIdx}&parentSeq={bcIdx}"
+                        
+                        print(f"\n수집 시도: {title}")
+                        print(f"URL: {detail_url}")
+                        
+                        # 상세 페이지 데이터 수집
+                        try:
+                            announcement_data = get_announcement_detail(detail_url, headers)
+                            if announcement_data:
+                                # 기본 정보 업데이트
+                                announcement_data.update({
+                                    'POSTDATE': reg_date,
+                                    'TITLE': title,
+                                    'LINK': detail_url
+                                })
+                                announcements.append(announcement_data)
+                                print(f"수집 완료: {title}")
+                        except Exception as e:
+                            print(f"상세 페이지 처리 중 오류: {e}")
+                            continue
+                            
+                        time.sleep(1)  # 요청 간격 조절
+                        
                     except Exception as e:
                         print(f"게시물 처리 중 오류: {e}")
                         continue
-                        
-                    time.sleep(1)
-            
-            print(f"{page}페이지 완료 - {len(announcements)}건 수집")
-            time.sleep(2)
-
-            # 더 이상 데이터가 없으면 종료
-            if not rows:  # 페이지에 데이터가 없으면
+                
+                if not stop_crawling:
+                    print(f"{page}페이지 완료 - {len(announcements)}건 수집")
+                    time.sleep(2)
+                    page += 1
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"페이지 요청 중 오류: {e}")
                 break
                 
-            page += 1
-            
     except Exception as e:
         print(f"크롤링 중 오류 발생: {e}")
     
+    print(f"수집 완료 - 총 {len(announcements)}건")
     return announcements
 
 def extract_date(date_str):
