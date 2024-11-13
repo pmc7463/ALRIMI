@@ -82,12 +82,12 @@ def setup_driver():
             print(f"대체 방법도 실패: {sub_e}")
             raise
 
-# 공고 상세 페이지 크롤링 함수
-def get_announcement_detail(url):
-    """상세 페이지에서 공고 정보를 추출하는 함수"""
+def get_announcement_detail(url, headers):
+    """공고 상세 페이지 크롤링"""
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
+        
         soup = BeautifulSoup(response.text, 'html.parser')
         
         data = {
@@ -95,211 +95,197 @@ def get_announcement_detail(url):
             'ANNOUNCEMENT_NUMBER': None,
             'TITLE': None,
             'CATEGORY': None,
-            'LOCATION': "전국",  # 기본값
+            'LOCATION': "전국",
             'CONTENT': None,
             'START': None,
             'END': None,
             'AGENCY': None,
             'LINK': url,
-            'FILE': None,
-            'KEYWORD': None
+            'FILE': None
         }
         
-        # 상세 내용 추출
-        content_elem = soup.select_one("div.view_cont")
-        if content_elem:
-            data['CONTENT'] = content_elem.text.strip()
+        # 제목 추출
+        title_element = soup.select_one('div.view_cont_tit')
+        if title_element:
+            data['TITLE'] = clean_content(title_element.text.strip())
+            
+        # 내용 추출 - 사업개요만
+        overview_element = soup.find('span', class_='s_title', string='사업개요')
+        if overview_element:
+            content_div = overview_element.find_next('div', class_='txt')
+            if content_div:
+                data['CONTENT'] = clean_content(content_div.text.strip())
         
         # 신청기간 추출
-        period_elem = soup.select_one("span.s_title:-soup-contains('신청기간') + div")
-        if period_elem:
-            period = period_elem.text.strip()
-            if '~' in period:
-                start_date, end_date = period.split('~')
-                data['START'] = start_date.strip()
-                data['END'] = end_date.strip()
-            else:
-                data['START'] = period.strip()
-        
-        # 사업수행기관 추출
-        agency_elem = soup.select_one("span.s_title:-soup-contains('사업수행기관') + div")
-        if agency_elem:
-            data['AGENCY'] = agency_elem.text.strip()
+        period_element = soup.find('span', class_='s_title', string='신청기간')
+        if period_element:
+            period_txt = period_element.find_next('div', class_='txt')
+            if period_txt:
+                period = period_txt.text.strip()
+                if '~' in period:
+                    start, end = period.split('~')
+                    data['START'] = extract_date(start.strip())
+                    data['END'] = extract_date(end.strip())
+                else:
+                    # 상시접수 등의 문자열인 경우
+                    data['START'] = period
         
         # 첨부파일 추출
-        files = []
-        file_list = soup.select("ul.file_list li")
-        for file_item in file_list:
-            file_name = file_item.text.strip()
+        file_names = []
+        for file_div in soup.select('div.file_name'):
+            file_name = file_div.text.strip()
             if file_name:
-                files.append(file_name)
-        if files:
-            data['FILE'] = ', '.join(files)
-        
-        # 해시태그(키워드) 추출
-        tags = soup.select(".tag_ul_list li span")
-        if tags:
-            keywords = [tag.text.strip()[1:] for tag in tags if tag.text.strip().startswith('#')]
-            if keywords:
-                data['KEYWORD'] = ', '.join(keywords)
-        
+                file_names.append(file_name)
+        if file_names:
+            data['FILE'] = ', '.join(file_names)
+
+        # 기관 정보 추출
+        agency_element = soup.find('span', class_='s_title', string='지원기관')
+        if agency_element:
+            agency_txt = agency_element.find_next('div', class_='txt')
+            if agency_txt:
+                data['AGENCY'] = agency_txt.text.strip()
+
         # 지역 정보 추출
-        location_text = f"{data['TITLE'] or ''} {data['CONTENT'] or ''} {data['AGENCY'] or ''}"
-        data['LOCATION'] = extract_location(location_text)
+        location_text = f"{data['TITLE']} {data['CONTENT']} {data['AGENCY']}"
+        locations = ['서울', '경기', '인천', '강원', '충북', '충남', '대전', '세종', 
+                    '전북', '전남', '광주', '경북', '경남', '대구', '울산', '부산', '제주']
         
+        found_locations = {}
+        for loc in locations:
+            count = location_text.count(loc)
+            if count > 0:
+                found_locations[loc] = count
+        
+        if found_locations:
+            # 가장 많이 언급된 지역
+            data['LOCATION'] = max(found_locations.items(), key=lambda x: x[1])[0]
+            
         return data
         
-    except requests.exceptions.RequestException as e:
-        print(f"상세 페이지 요청 중 오류: {e}")
-        return None
     except Exception as e:
-        print(f"상세 페이지 데이터 추출 중 오류: {e}")
+        print(f"상세 페이지 크롤링 중 오류 발생: {e}")
         return None
 
-# 공고 목록 페이지 크롤링 함수
-def get_announcement_list(base_url, start_page=150, end_page=None):
-    """공고 목록을 수집하고 기본 정보를 추출하는 함수"""
+def get_announcement_list(base_url, start_page=1, end_page=None):
+    """공고 목록 수집"""
     checkpoint = CrawlerCheckpoint('bizinfo')
     announcements = []
-    current_page = start_page
     stop_crawling = False
     
     try:
-        while True:
+        page = start_page
+        while end_page is None or page <= end_page:
             if stop_crawling:
                 break
                 
             print(f"\n{'='*50}")
-            print(f"현재 {current_page}페이지 크롤링 시작")
+            print(f"현재 {page}페이지 크롤링 시작")
             
-            # URL로 직접 페이지 이동
-            url = f"{base_url}?page={current_page}"
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # 테이블 확인
-            table = soup.select_one(".table_Type_1 tbody")
-            if not table:
-                print("테이블을 찾을 수 없습니다.")
-                break
-            
-            rows = table.select("tr")
-            if not rows:
-                print("더 이상 공고가 없습니다.")
+            try:
+                url = f"{base_url}?rows=15&cpage={page}"
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # HTML 구조에 맞게 선택자 수정
+                rows = soup.select("tbody tr")  # tbody 내의 모든 tr 선택
+                
+                if not rows:
+                    print("더 이상 공고가 없습니다.")
+                    break
+                    
+                print(f"찾은 공고 개수: {len(rows)}")
+                
+                for row in rows:
+                    try:
+                        # 각 컬럼 데이터 추출
+                        cols = row.select("td")
+                        if len(cols) < 7:
+                            continue
+                            
+                        reg_date = cols[6].text.strip()  # 등록일
+                        title_element = cols[2].select_one("a")  # 제목 및 링크
+                        if not title_element:
+                            continue
+                            
+                        title = title_element.text.strip()
+                        category = cols[1].text.strip()  # 카테고리
+                        
+                        print(f"현재 처리 중: {reg_date}, {title}")
+                        
+                        # 체크포인트 비교
+                        if checkpoint.last_crawled:
+                            last_date = checkpoint.last_crawled['last_post_date']
+                            last_title = checkpoint.last_crawled['last_title']
+                            
+                            if reg_date == last_date and title == last_title:
+                                print(f"\n이전 수집 지점 도달. 크롤링 중단")
+                                stop_crawling = True
+                                break
+                        
+                        # 첫 번째 게시물 체크포인트 저장
+                        if page == start_page and len(announcements) == 0:
+                            print(f"체크포인트 저장: {reg_date}, {title}")
+                            checkpoint.save_checkpoint(reg_date, title)
+                        
+                        # href 속성에서 공고 ID 추출
+                        href = title_element.get('href', '')
+                        if 'pblancId=' not in href:
+                            continue
+                            
+                        pblanc_id = href.split('pblancId=')[1].split('&')[0] if '&' in href else href.split('pblancId=')[1]
+                        detail_url = f"https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/view.do?pblancId={pblanc_id}"
+                        
+                        print(f"\n수집 시도: {title}")
+                        print(f"URL: {detail_url}")
+                        
+                        # 상세 페이지 데이터 수집
+                        try:
+                            announcement_data = get_announcement_detail(detail_url, headers)
+                            if announcement_data:
+                                # 기본 정보 업데이트 (location은 제외)
+                                announcement_data.update({
+                                    'POSTDATE': reg_date,
+                                    'CATEGORY': category,
+                                    'TITLE': title,
+                                    'LINK': detail_url,
+                                    'AGENCY': cols[5].text.strip() if len(cols) > 5 else None
+                                })
+                                announcements.append(announcement_data)
+                                print(f"수집 완료: {title}")
+                        except Exception as e:
+                            print(f"상세 페이지 처리 중 오류: {e}")
+                            continue
+                            
+                        time.sleep(1)
+                        
+                    except Exception as e:
+                        print(f"게시물 처리 중 오류: {e}")
+                        continue
+                
+                if not stop_crawling:
+                    # 다음 페이지 존재 여부 확인
+                    next_page = soup.select_one(f"div.page_wrap a[title='{page + 1}페이지']")
+                    if not next_page:
+                        print("마지막 페이지입니다.")
+                        break
+                        
+                    print(f"{page}페이지 완료 - {len(announcements)}건 수집")
+                    time.sleep(2)
+                    page += 1
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"페이지 요청 중 오류: {e}")
                 break
                 
-            print(f"찾은 공고 개수: {len(rows)}")
-            
-            # 각 공고 처리
-            for idx, row in enumerate(rows):
-                try:
-                    cols = row.select("td")
-                    if len(cols) < 7:
-                        print("컬럼 수가 부족합니다.")
-                        continue
-                    
-                    # 목록 페이지에서 기본 정보 추출
-                    title_elem = row.select_one("td.txt_l a")
-                    if not title_elem:
-                        print("제목 요소를 찾을 수 없습니다.")
-                        continue
-                    
-                    title = title_elem.text.strip()
-                    post_date = cols[6].text.strip()
-                    category = cols[1].text.strip()
-                    
-                    if not all([title, post_date, category]):
-                        print("필수 정보가 누락되었습니다.")
-                        continue
-                        
-                    print(f"\n처리 중 ({current_page}페이지 {idx+1}/{len(rows)}): {title}")
-                    
-                    # 체크포인트 확인
-                    if checkpoint.last_crawled:
-                        if (post_date == checkpoint.last_crawled['last_post_date'] and 
-                            title == checkpoint.last_crawled['last_title']):
-                            print(f"\n이전 수집 지점 도달. 크롤링 중단")
-                            stop_crawling = True
-                            break
-                    
-                    # 상세 페이지 URL 추출
-                    href = title_elem.get('href', '')
-                    onclick = title_elem.get('onclick', '')
-                    pblancId = None
-                    
-                    if href and 'pblancId=' in href:
-                        pblancId = href.split('pblancId=')[1].split('&')[0]
-                    elif onclick:
-                        match = re.search(r"'([^']*)'", onclick)
-                        if match:
-                            pblancId = match.group(1)
-                    
-                    if not pblancId:
-                        print(f"공고 ID를 찾을 수 없음")
-                        continue
-                    
-                    detail_url = f"https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/view.do?pblancId={pblancId}"
-                    print(f"URL: {detail_url}")
-                    
-                    # 상세 페이지 데이터 수집
-                    detail_data = get_announcement_detail(detail_url)
-                    
-                    if detail_data:
-                        # 목록 페이지 정보로 업데이트
-                        detail_data.update({
-                            'POSTDATE': post_date,
-                            'CATEGORY': category,
-                            'TITLE': title,
-                            'LINK': detail_url
-                        })
-                        
-                        if len(announcements) == 0:
-                            checkpoint.save_checkpoint(post_date, title)
-                        
-                        announcements.append(detail_data)
-                        print(f"수집 완료: {title}")
-                    
-                    time.sleep(1)  # 요청 간격 조절
-                    
-                except Exception as e:
-                    print(f"공고 처리 중 오류: {e}")
-                    continue
-            
-            if stop_crawling:
-                break
-            
-            # 다음 페이지 확인
-            pagination = soup.select_one('.pagination')
-            if not pagination:
-                print("페이지네이션을 찾을 수 없습니다.")
-                break
-                
-            # 페이지 번호 추출
-            page_numbers = []
-            for a in pagination.find_all('a'):
-                if a.text.strip().isdigit():
-                    page_numbers.append(int(a.text.strip()))
-            
-            if not page_numbers or current_page >= max(page_numbers):
-                print("마지막 페이지입니다.")
-                break
-                
-            if end_page and current_page >= end_page:
-                print(f"지정된 마지막 페이지({end_page}) 도달")
-                break
-            
-            current_page += 1
-            time.sleep(1)  # 페이지 이동 간격
-            
-    except requests.exceptions.RequestException as e:
-        print(f"페이지 요청 중 오류: {e}")
     except Exception as e:
         print(f"크롤링 중 오류 발생: {e}")
     
-    print(f"\n수집 완료 - 총 {len(announcements)}건")
+    print(f"수집 완료 - 총 {len(announcements)}건")
     return announcements
+
 def extract_date(date_str):
     """날짜 문자열을 YYYY-MM-DD 형식으로 변환"""
     if not date_str:
@@ -393,20 +379,23 @@ headers = {
 class CrawlerCheckpoint:
     def __init__(self, site_name):
         self.site_name = site_name
-        # 현재 스크립트의 상위 디렉토리(ALRIMI)를 기준으로 경로 설정
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.checkpoint_file = os.path.join(base_dir, 'checkpoints', f'{site_name}_last_crawled.json')
-        #print(f"체크포인트 파일 경로: {self.checkpoint_file}")  # 디버깅용
+        # 절대 경로로 변경
+        self.checkpoint_dir = '/home/pmc/work_space/ALRIMI/Crawlers/checkpoints'
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, f'{site_name}_last_crawled.json')
         self.last_crawled = self.load_checkpoint()
-
+        
     def load_checkpoint(self):
         """체크포인트 파일 로드"""
-        if not os.path.exists('checkpoints'):
-            os.makedirs('checkpoints')
+        try:
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
             
-        if os.path.exists(self.checkpoint_file):
-            with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            if os.path.exists(self.checkpoint_file):
+                with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"체크포인트 로드 중 오류: {e}")
         return None
         
     def save_checkpoint(self, post_date, title):
@@ -418,21 +407,20 @@ class CrawlerCheckpoint:
                 'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
-            # 디렉토리 존재 확인 및 생성
-            checkpoint_dir = os.path.dirname(self.checkpoint_file)
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
-                print(f"체크포인트 디렉토리 생성: {checkpoint_dir}")
-                
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
+            
             with open(self.checkpoint_file, 'w', encoding='utf-8') as f:
                 json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
             
             self.last_crawled = checkpoint_data
-            print(f"체크포인트 저장 성공: {self.checkpoint_file}")
-            #print(f"저장된 데이터: {checkpoint_data}")  # 디버깅용
+            print(f"체크포인트 저장 완료: {self.checkpoint_file}")
+            
         except Exception as e:
-            print(f"체크포인트 저장 중 오류 발생: {e}")
-            #print(f"저장 시도한 경로: {self.checkpoint_file}")  # 디버깅용
+            print(f"체크포인트 저장 중 오류: {e}")
+            print(f"시도한 경로: {self.checkpoint_file}")
+            raise
 
 # 체크포인트 확인을 위한 함수 추가
 def print_checkpoint(site_name='Bizinfo'):
@@ -469,11 +457,11 @@ def insert_into_db(connection, announcements):
                 POSTDATE, ANNOUNCEMENT_NUMBER, TITLE, 
                 CATEGORY, LOCATION, CONTENT, 
                 START, END, AGENCY, 
-                LINK, FILE, KEYWORD
+                LINK, FILE
             ) VALUES (
                 %s, %s, %s, %s,
                 %s, %s, %s, %s, 
-                %s, %s, %s, %s
+                %s, %s, %s
             )
         """
         
@@ -507,10 +495,6 @@ def insert_into_db(connection, announcements):
             if link and len(link) > 300:
                 link = link[:300]
 
-            keyword = announcement.get('KEYWORD')
-            if keyword and len(keyword) > 100:
-                keyword = keyword[:100]
-
             file = announcement.get('FILE')
             if file and len(file) > 200:
                 file = file[:200]
@@ -526,8 +510,7 @@ def insert_into_db(connection, announcements):
                 announcement.get('END'),
                 agency,
                 link,
-                file,
-                keyword
+                file
             )
             
             cursor.execute(insert_query, values)

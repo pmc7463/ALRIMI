@@ -35,12 +35,11 @@ def main():
    sites = ['중소벤처기업부', '소셜벤쳐스퀘어', '창조경제혁신센터', 'iris', '기업마당', 'kstartup']  # 크롤러 파일명 (확장자 제외)
    
    for site in sites:
-       # 매일 오전 9시에 실행
        scheduler.add_job(
            run_crawler, 
            'cron', 
-           hour=00,
-           minute=33,
+           hour=15,
+           minute=1,
            args=[site],
            id=f'{site}_crawler',
            name=f'{site} Crawler'

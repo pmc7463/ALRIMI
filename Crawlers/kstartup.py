@@ -94,8 +94,7 @@ def get_announcement_detail_selenium(driver):
             'END': None,
             'AGENCY': None,
             'LINK': driver.current_url,
-            'FILE': None,
-            'KEYWORD': None
+            'FILE': None
         }
 
         # 제목 추출
@@ -214,129 +213,147 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
             print(f"\n{'='*50}")
             print(f"현재 {page}페이지 크롤링 시작")
             
-            url = f"{base_url}?page={page}&schStr=regist&pbancEndYn=N"
+            url = f"{base_url}?schM=&page={page}&schStr=&pbancEndYn=N"
             driver.get(url)
             
-            # 페이지 로딩 대기
             try:
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice"))
+                # 데이터 없음 확인
+                no_data = WebDriverWait(driver, 1).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice, .no_data"))
                 )
+                
+                # "등록된 데이터가 없습니다" 텍스트 확인
+                if "등록된 데이터가 없습니다" in driver.page_source:
+                    print("마지막 페이지 도달. 크롤링 종료.")
+                    break
+                
             except Exception as e:
                 print(f"페이지 로딩 시간 초과: {e}")
                 break
 
-            # BeautifulSoup으로 현재 페이지 파싱
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
-            items = soup.select("li.notice")
-
+            # 한 번에 모든 공고 정보 수집
+            items = driver.find_elements(By.CSS_SELECTOR, "li.notice")
+            
             if not items:
                 print("더 이상 공고가 없습니다.")
                 break
 
             print(f"찾은 공고 개수: {len(items)}")
             
+            # 각 항목의 기본 정보 수집
+            announcements_data = []
             for item in items:
                 try:
                     # 제목 추출
-                    title_elem = item.select_one(".middle .tit")
-                    if not title_elem:
-                        print("제목 요소를 찾을 수 없음")
-                        continue
-                    title = title_elem.text.strip()
+                    title = item.find_element(By.CSS_SELECTOR, ".middle .tit").text.strip()
                     
                     # 등록일자 추출
                     post_date = None
-                    info_lists = item.select(".bottom .list")
+                    info_lists = item.find_elements(By.CSS_SELECTOR, ".bottom .list")
                     for info in info_lists:
-                        if info and "등록일자" in info.text:
+                        if "등록일자" in info.text:
                             post_date = info.text.replace("등록일자", "").strip()
                             break
                     
                     if not post_date:
-                        print(f"등록일자를 찾을 수 없음: {title}")
                         continue
                     
-                    print(f"현재 처리 중: {post_date}, {title}")
+                    # 공고 ID 추출
+                    pbancSn = None
+                    
+                    # 1. href에서 추출 시도
+                    try:
+                        link = item.find_element(By.CSS_SELECTOR, "a[href*='javascript:go_view']")
+                        onclick = link.get_attribute('href')
+                        if onclick:
+                            match = re.search(r'go_view\((\d+)\)', onclick)
+                            if match:
+                                pbancSn = match.group(1)
+                    except:
+                        pass
+                    
+                    # 2. go_view_blank에서 추출 시도
+                    if not pbancSn:
+                        try:
+                            button = item.find_element(By.CSS_SELECTOR, "button[onclick*='go_view_blank']")
+                            onclick = button.get_attribute('onclick')
+                            if onclick:
+                                match = re.search(r'go_view_blank\((\d+)\)', onclick)
+                                if match:
+                                    pbancSn = match.group(1)
+                        except:
+                            pass
+                    
+                    if not pbancSn:
+                        continue
+                        
+                    # 카테고리 추출
+                    try:
+                        category = item.find_element(By.CSS_SELECTOR, ".top .flag").text.strip()
+                    except:
+                        category = None
+                    
+                    announcements_data.append({
+                        'title': title,
+                        'post_date': post_date,
+                        'pbancSn': pbancSn,
+                        'category': category
+                    })
+                    
+                except Exception as e:
+                    print(f"항목 처리 중 오류: {e}")
+                    continue
+            
+            # 체크포인트 확인 및 데이터 수집
+            for data in announcements_data:
+                try:
+                    print(f"현재 처리 중: {data['post_date']}, {data['title']}")
                     
                     # 체크포인트 비교
                     if checkpoint.last_crawled:
-                        if (post_date == checkpoint.last_crawled['last_post_date'] and 
-                            title == checkpoint.last_crawled['last_title']):
+                        if (data['post_date'] == checkpoint.last_crawled['last_post_date'] and 
+                            data['title'] == checkpoint.last_crawled['last_title']):
                             print(f"\n이전 수집 지점 도달. 크롤링 중단")
                             stop_crawling = True
                             break
                     
-                    # 링크 추출
-                    link_elem = item.select_one(".middle a")
-                    if not link_elem:
-                        print(f"링크 요소를 찾을 수 없음: {title}")
-                        continue
-                        
-                    # onclick 속성 추출 시도
-                    href = link_elem.get('href', '')
-                    if not href:
-                        onclick = link_elem.get('onclick', '')
-                        if not onclick:
-                            print(f"href와 onclick 속성 모두 없음: {title}")
-                            continue
-                        href = onclick
-                    
-                    # pbancSn 추출
-                    match = re.search(r'go_view\((\d+)\)', href)
-                    if not match:
-                        print(f"공고 ID를 찾을 수 없음: {href}")
-                        continue
-                        
-                    pbancSn = match.group(1)
-                    detail_url = f"{base_url}?schM=view&pbancSn={pbancSn}&page={page}&schStr=regist&pbancEndYn=N"
-                    print(f"\n수집 시도: {title}")
+                    detail_url = f"https://www.k-startup.go.kr/web/contents/bizpbanc-ongoing.do?schM=view&pbancSn={data['pbancSn']}&page={page}&schStr=&pbancEndYn=N"
+                    print(f"\n수집 시도: {data['title']}")
                     print(f"URL: {detail_url}")
                     
-                    # 상세 페이지 이동
                     driver.get(detail_url)
-                    time.sleep(2)
+                    
+                    try:
+                        # 상세 페이지 로딩 대기
+                        WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, ".title h3"))
+                        )
+                    except:
+                        print("상세 페이지 로딩 실패")
+                        continue
                     
                     announcement_data = get_announcement_detail_selenium(driver)
                     
                     if announcement_data:
-                        # 카테고리 추출
-                        category_elem = item.select_one(".top .flag")
-                        category = category_elem.text.strip() if category_elem else None
+                        if page == start_page and len(announcements) == 0:
+                            checkpoint.save_checkpoint(data['post_date'], data['title'])
                         
                         announcement_data.update({
-                            'POSTDATE': post_date,
-                            'CATEGORY': category,
+                            'POSTDATE': data['post_date'],
+                            'CATEGORY': data['category'],
                             'LINK': detail_url
                         })
                         
-                        if len(announcements) == 0:
-                            checkpoint.save_checkpoint(post_date, title)
-                        
                         announcements.append(announcement_data)
-                        print(f"수집 완료: {title}")
+                        print(f"수집 완료: {data['title']}")
                     
-                    # 목록 페이지로 복귀
-                    driver.get(url)
-                    try:
-                        WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, "li.notice"))
-                        )
-                    except:
-                        print("목록 페이지 로딩 실패")
-                        continue
-                
                 except Exception as e:
-                    print(f"공고 처리 중 오류: {e}")
-                    try:
-                        driver.get(url)
-                        time.sleep(2)
-                    except:
-                        print("목록 페이지 복귀 실패")
+                    print(f"상세 정보 수집 중 오류: {e}")
                     continue
             
-            print(f"{page}페이지 완료 - {len(announcements)}건 수집")
-            page += 1
+            if not stop_crawling:
+                print(f"{page}페이지 완료 - {len(announcements)}건 수집")
+                page += 1
             
     except Exception as e:
         print(f"크롤링 중 오류 발생: {e}")
@@ -544,17 +561,23 @@ headers = {
 class CrawlerCheckpoint:
     def __init__(self, site_name):
         self.site_name = site_name
-        self.checkpoint_file = f'checkpoints/{site_name}_last_crawled.json'
+        # 절대 경로로 변경
+        self.checkpoint_dir = '/home/pmc/work_space/ALRIMI/Crawlers/checkpoints'
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, f'{site_name}_last_crawled.json')
         self.last_crawled = self.load_checkpoint()
         
     def load_checkpoint(self):
         """체크포인트 파일 로드"""
-        if not os.path.exists('checkpoints'):
-            os.makedirs('checkpoints')
+        try:
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
             
-        if os.path.exists(self.checkpoint_file):
-            with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            if os.path.exists(self.checkpoint_file):
+                with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"체크포인트 로드 중 오류: {e}")
         return None
         
     def save_checkpoint(self, post_date, title):
@@ -566,21 +589,20 @@ class CrawlerCheckpoint:
                 'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
-            # 디렉토리 존재 확인 및 생성
-            checkpoint_dir = os.path.dirname(self.checkpoint_file)
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
-                print(f"체크포인트 디렉토리 생성: {checkpoint_dir}")
-                
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
+            
             with open(self.checkpoint_file, 'w', encoding='utf-8') as f:
                 json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
             
             self.last_crawled = checkpoint_data
-            print(f"체크포인트 저장 성공: {self.checkpoint_file}")
-            #print(f"저장된 데이터: {checkpoint_data}")  # 디버깅용
+            print(f"체크포인트 저장 완료: {self.checkpoint_file}")
+            
         except Exception as e:
-            print(f"체크포인트 저장 중 오류 발생: {e}")
-            #print(f"저장 시도한 경로: {self.checkpoint_file}")  # 디버깅용
+            print(f"체크포인트 저장 중 오류: {e}")
+            print(f"시도한 경로: {self.checkpoint_file}")
+            raise
 
 # 체크포인트 확인을 위한 함수 추가
 def print_checkpoint(site_name='kstartup'):
@@ -617,11 +639,11 @@ def insert_into_db(connection, announcements):
                 POSTDATE, ANNOUNCEMENT_NUMBER, TITLE, 
                 CATEGORY, LOCATION, CONTENT, 
                 START, END, AGENCY, 
-                LINK, FILE, KEYWORD
+                LINK, FILE
             ) VALUES (
                 %s, %s, %s, %s,
                 %s, %s, %s, %s, 
-                %s, %s, %s, %s
+                %s, %s, %s
             )
         """
         
@@ -655,10 +677,6 @@ def insert_into_db(connection, announcements):
             if link and len(link) > 300:
                 link = link[:300]
 
-            keyword = announcement.get('KEYWORD')
-            if keyword and len(keyword) > 100:
-                keyword = keyword[:100]
-
             file = announcement.get('FILE')
             if file and len(file) > 200:
                 file = file[:200]
@@ -674,8 +692,7 @@ def insert_into_db(connection, announcements):
                 announcement.get('END'),
                 agency,
                 link,
-                file,
-                keyword
+                file
             )
             
             cursor.execute(insert_query, values)

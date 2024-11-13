@@ -29,7 +29,7 @@ def run():
     
     # 데이터 수집
     #announcements = get_announcement_list(base_url, start_page=1, end_page=1)
-    announcements = get_announcement_list(base_url, start_page=40, end_page=None)
+    announcements = get_announcement_list(base_url, start_page=1, end_page=None)
 
     print("\n최종 결과:")
     print(f"총 {len(announcements)}개의 공고 수집 완료")
@@ -106,8 +106,7 @@ def get_announcement_detail(url, headers):
             'END': None,
             'AGENCY': None,
             'LINK': url,
-            'FILE': None,
-            'KEYWORD': None
+            'FILE': None
         }
         
         # 구분(카테고리) 추출
@@ -288,8 +287,9 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                                     'AGENCY': agency,
                                     'LINK': detail_url
                                 })
-                                
-                                if len(announcements) == 0:
+
+                                # 첫 번째 게시물 체크포인트 저장
+                                if page == start_page and len(announcements) == 0:
                                     print(f"체크포인트 저장: {reg_date}, {title}")
                                     checkpoint.save_checkpoint(reg_date, title)
                                 
@@ -413,20 +413,23 @@ headers = {
 class CrawlerCheckpoint:
     def __init__(self, site_name):
         self.site_name = site_name
-        # 현재 스크립트의 상위 디렉토리(ALRIMI)를 기준으로 경로 설정
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.checkpoint_file = os.path.join(base_dir, 'checkpoints', f'{site_name}_last_crawled.json')
-        #print(f"체크포인트 파일 경로: {self.checkpoint_file}")  # 디버깅용
+        # 절대 경로로 변경
+        self.checkpoint_dir = '/home/pmc/work_space/ALRIMI/Crawlers/checkpoints'
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, f'{site_name}_last_crawled.json')
         self.last_crawled = self.load_checkpoint()
-
+        
     def load_checkpoint(self):
         """체크포인트 파일 로드"""
-        if not os.path.exists('checkpoints'):
-            os.makedirs('checkpoints')
+        try:
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
             
-        if os.path.exists(self.checkpoint_file):
-            with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            if os.path.exists(self.checkpoint_file):
+                with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"체크포인트 로드 중 오류: {e}")
         return None
         
     def save_checkpoint(self, post_date, title):
@@ -438,21 +441,20 @@ class CrawlerCheckpoint:
                 'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
-            # 디렉토리 존재 확인 및 생성
-            checkpoint_dir = os.path.dirname(self.checkpoint_file)
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
-                print(f"체크포인트 디렉토리 생성: {checkpoint_dir}")
-                
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
+            
             with open(self.checkpoint_file, 'w', encoding='utf-8') as f:
                 json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
             
             self.last_crawled = checkpoint_data
-            print(f"체크포인트 저장 성공: {self.checkpoint_file}")
-            #print(f"저장된 데이터: {checkpoint_data}")  # 디버깅용
+            print(f"체크포인트 저장 완료: {self.checkpoint_file}")
+            
         except Exception as e:
-            print(f"체크포인트 저장 중 오류 발생: {e}")
-            #print(f"저장 시도한 경로: {self.checkpoint_file}")  # 디버깅용
+            print(f"체크포인트 저장 중 오류: {e}")
+            print(f"시도한 경로: {self.checkpoint_file}")
+            raise
 
 # 체크포인트 확인을 위한 함수 추가
 def print_checkpoint(site_name='socialventure'):
@@ -489,11 +491,11 @@ def insert_into_db(connection, announcements):
                 POSTDATE, ANNOUNCEMENT_NUMBER, TITLE, 
                 CATEGORY, LOCATION, CONTENT, 
                 START, END, AGENCY, 
-                LINK, FILE, KEYWORD
+                LINK, FILE
             ) VALUES (
                 %s, %s, %s, %s,
                 %s, %s, %s, %s, 
-                %s, %s, %s, %s
+                %s, %s, %s
             )
         """
         
@@ -527,10 +529,6 @@ def insert_into_db(connection, announcements):
             if link and len(link) > 300:
                 link = link[:300]
 
-            keyword = announcement.get('KEYWORD')
-            if keyword and len(keyword) > 100:
-                keyword = keyword[:100]
-
             file = announcement.get('FILE')
             if file and len(file) > 200:
                 file = file[:200]
@@ -547,7 +545,6 @@ def insert_into_db(connection, announcements):
                 agency,
                 link,
                 file,
-                keyword
             )
             
             cursor.execute(insert_query, values)

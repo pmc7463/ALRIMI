@@ -96,8 +96,7 @@ def get_announcement_detail_selenium(driver):
             'END': None,
             'AGENCY': None,
             'LINK': driver.current_url,
-            'FILE': None,
-            'KEYWORD': None
+            'FILE': None
         }
         
         # 기본 정보 추출
@@ -189,17 +188,22 @@ def get_announcement_detail_selenium(driver):
     
 # 공고 메인 페이지 크롤링 함수
 def get_announcement_list(base_url, start_page=1, end_page=None):
+    """공고 목록을 수집하는 메인 함수"""
     checkpoint = CrawlerCheckpoint('iris')
     announcements = []
-    stop_crawling = False
+    current_page = start_page
     
     try:
         driver = setup_driver()
-        url = "https://www.iris.go.kr/contents/retrieveBsnsAncmBtinSituListView.do"
         
-        while True:  # 무한 루프로 변경
+        while True:
             try:
-                driver.get(url)
+                # 페이지 URL 생성 및 이동
+                if current_page == 1:
+                    driver.get(base_url)
+                else:
+                    page_url = f"{base_url}?pageIndex={current_page}"
+                    driver.get(page_url)
                 time.sleep(2)
                 
                 # 페이지 로딩 대기
@@ -216,17 +220,19 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                 items = soup.select('.dbody li')
 
                 if not items:
-                    print("공고를 찾을 수 없습니다.")
+                    print("공고를 찾을 수 없습니다. 마지막 페이지에 도달했거나 데이터가 없습니다.")
                     break
 
+                print(f"\n현재 페이지: {current_page}")
                 print(f"찾은 공고 개수: {len(items)}")
                 
-                for idx, item in enumerate(items):
+                # 각 공고 항목 처리
+                for idx, item in enumerate(items, 1):
                     try:
                         # 기관 정보 추출
                         inst_elem = item.select_one('.inst_title')
                         if not inst_elem:
-                            print("기관 정보를 찾을 수 없음")
+                            print(f"{idx}번 항목: 기관 정보를 찾을 수 없음")
                             continue
                         agencies = inst_elem.text.strip().split(' > ')
                         agency = agencies[-1].strip() if agencies else None
@@ -234,7 +240,7 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                         # 기본 정보 추출
                         info_div = item.select_one('.etc_info')
                         if not info_div:
-                            print("기본 정보를 찾을 수 없음")
+                            print(f"{idx}번 항목: 기본 정보를 찾을 수 없음")
                             continue
                             
                         spans = info_div.select('span')
@@ -254,21 +260,20 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                         # 제목과 링크 추출
                         title_elem = item.select_one('.title a')
                         if not title_elem:
-                            print("제목 요소를 찾을 수 없음")
+                            print(f"{idx}번 항목: 제목 요소를 찾을 수 없음")
                             continue
                         
                         title = title_elem.text.strip()
                         onclick = title_elem.get('onclick', '')
                         
-                        print(f"현재 처리 중: {post_date}, {title}")
+                        print(f"\n처리 중 ({current_page}페이지 {idx}/{len(items)}): {post_date}, {title}")
                         
                         # 체크포인트 비교
                         if checkpoint.last_crawled:
                             if (post_date == checkpoint.last_crawled['last_post_date'] and 
                                 title == checkpoint.last_crawled['last_title']):
                                 print(f"\n이전 수집 지점 도달. 크롤링 중단")
-                                stop_crawling = True
-                                break
+                                return announcements
                         
                         # 상세 페이지 ID 추출
                         if not onclick:
@@ -281,8 +286,6 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                             continue
                         
                         detail_url = f"https://www.iris.go.kr/contents/retrieveBsnsAncmView.do?ancmId={detail_id.group(1)}"
-                        print(f"\n수집 시도: {title}")
-                        print(f"URL: {detail_url}")
                         
                         # 새 탭에서 상세 페이지 열기
                         try:
@@ -303,35 +306,50 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
                                     'AGENCY': agency,
                                 })
                                 
-                                if len(announcements) == 0:
+                                if current_page == start_page and len(announcements) == 0:
+                                    print(f"체크포인트 저장: {post_date}, {title}")
                                     checkpoint.save_checkpoint(post_date, title)
                                 
                                 announcements.append(announcement_data)
                                 print(f"수집 완료: {title}")
                             
-                        except Exception as e:
-                            print(f"상세 페이지 처리 중 오류: {e}")
-                        
                         finally:
-                            # 상세 페이지 탭 닫기 및 원래 탭으로 복귀
-                            try:
-                                if len(driver.window_handles) > 1:
-                                    driver.close()
-                                    driver.switch_to.window(driver.window_handles[0])
-                                    time.sleep(2)
-                            except Exception as e:
-                                print(f"탭 전환 중 오류: {e}")
+                            # 상세 페이지 탭 닫기
+                            if len(driver.window_handles) > 1:
+                                driver.close()
+                                driver.switch_to.window(driver.window_handles[0])
+                                time.sleep(2)
                     
                     except Exception as e:
                         print(f"공고 처리 중 오류: {e}")
                         continue
                 
-                if stop_crawling:
-                    break
-                    
                 # 다음 페이지 확인 및 이동
-                # ... 페이징 처리 로직 추가 필요 ...
-                break  # 임시로 첫 페이지만 수집
+                try:
+                    # 현재 페이지 정보 확인
+                    page_info = driver.find_element(By.CLASS_NAME, 'current_page')
+                    total_page = int(page_info.text.split('/')[-1].strip())
+                    print(f"\n전체 페이지: {total_page}")
+                    
+                    if current_page < total_page:
+                        print(f"\n{current_page + 1}페이지로 이동...")
+                        # URL로 직접 다음 페이지 이동
+                        next_page = current_page + 1
+                        next_url = f"{base_url}?pageIndex={next_page}"
+                        driver.get(next_url)
+                        current_page = next_page
+                        time.sleep(3)
+                        
+                        if end_page and current_page > end_page:
+                            print(f"지정된 마지막 페이지({end_page})에 도달했습니다.")
+                            break
+                    else:
+                        print("마지막 페이지입니다.")
+                        break
+                        
+                except Exception as e:
+                    print(f"페이징 처리 중 오류: {e}")
+                    break
                 
             except Exception as e:
                 print(f"페이지 처리 중 오류: {e}")
@@ -344,7 +362,7 @@ def get_announcement_list(base_url, start_page=1, end_page=None):
         if driver:
             driver.quit()
     
-    print(f"수집 완료 - 총 {len(announcements)}건")
+    print(f"\n수집 완료 - 총 {len(announcements)}건")
     return announcements
 
 def extract_date(date_str):
@@ -440,20 +458,23 @@ headers = {
 class CrawlerCheckpoint:
     def __init__(self, site_name):
         self.site_name = site_name
-        # 현재 스크립트의 상위 디렉토리(ALRIMI)를 기준으로 경로 설정
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.checkpoint_file = os.path.join(base_dir, 'checkpoints', f'{site_name}_last_crawled.json')
-        #print(f"체크포인트 파일 경로: {self.checkpoint_file}")  # 디버깅용
+        # 절대 경로로 변경
+        self.checkpoint_dir = '/home/pmc/work_space/ALRIMI/Crawlers/checkpoints'
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, f'{site_name}_last_crawled.json')
         self.last_crawled = self.load_checkpoint()
-
+        
     def load_checkpoint(self):
         """체크포인트 파일 로드"""
-        if not os.path.exists('checkpoints'):
-            os.makedirs('checkpoints')
+        try:
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
             
-        if os.path.exists(self.checkpoint_file):
-            with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            if os.path.exists(self.checkpoint_file):
+                with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"체크포인트 로드 중 오류: {e}")
         return None
         
     def save_checkpoint(self, post_date, title):
@@ -465,21 +486,20 @@ class CrawlerCheckpoint:
                 'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
-            # 디렉토리 존재 확인 및 생성
-            checkpoint_dir = os.path.dirname(self.checkpoint_file)
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
-                print(f"체크포인트 디렉토리 생성: {checkpoint_dir}")
-                
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
+            
             with open(self.checkpoint_file, 'w', encoding='utf-8') as f:
                 json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
             
             self.last_crawled = checkpoint_data
-            print(f"체크포인트 저장 성공: {self.checkpoint_file}")
-            #print(f"저장된 데이터: {checkpoint_data}")  # 디버깅용
+            print(f"체크포인트 저장 완료: {self.checkpoint_file}")
+            
         except Exception as e:
-            print(f"체크포인트 저장 중 오류 발생: {e}")
-            #print(f"저장 시도한 경로: {self.checkpoint_file}")  # 디버깅용
+            print(f"체크포인트 저장 중 오류: {e}")
+            print(f"시도한 경로: {self.checkpoint_file}")
+            raise
 
 # 체크포인트 확인을 위한 함수 추가
 def print_checkpoint(site_name='iris'):
@@ -516,11 +536,11 @@ def insert_into_db(connection, announcements):
                 POSTDATE, ANNOUNCEMENT_NUMBER, TITLE, 
                 CATEGORY, LOCATION, CONTENT, 
                 START, END, AGENCY, 
-                LINK, FILE, KEYWORD
+                LINK, FILE
             ) VALUES (
                 %s, %s, %s, %s,
                 %s, %s, %s, %s, 
-                %s, %s, %s, %s
+                %s, %s, %s
             )
         """
         
@@ -554,10 +574,6 @@ def insert_into_db(connection, announcements):
             if link and len(link) > 300:
                 link = link[:300]
 
-            keyword = announcement.get('KEYWORD')
-            if keyword and len(keyword) > 100:
-                keyword = keyword[:100]
-
             file = announcement.get('FILE')
             if file and len(file) > 200:
                 file = file[:200]
@@ -573,8 +589,7 @@ def insert_into_db(connection, announcements):
                 announcement.get('END'),
                 agency,
                 link,
-                file,
-                keyword
+                file
             )
             
             cursor.execute(insert_query, values)

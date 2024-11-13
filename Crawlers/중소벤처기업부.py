@@ -102,8 +102,7 @@ def get_announcement_detail(url, headers):
             'END': None,
             'AGENCY': None,
             'LINK': url,
-            'FILE': None,
-            'KEYWORD': None
+            'FILE': None
         }
         
         # 제목
@@ -162,14 +161,6 @@ def get_announcement_detail(url, headers):
                     files.append(file_info)
 
         data['FILE'] = clean_file_info(files)
-        
-        # 키워드 추출
-        #keyword_row = board_view.find('th', text='키워드')
-        keyword_row = board_view.find('th', string='키워드')  # text 대신 string 사용
-        if keyword_row:
-            keyword_cell = keyword_row.find_next('td')
-            if keyword_cell:
-                data['KEYWORD'] = keyword_cell.text.strip()
         
         # 지역 정보 추출
         location_text = f"{data['TITLE']} {data['CONTENT']} {data['AGENCY']}"
@@ -264,7 +255,7 @@ def get_announcement_list(base_url, start_page=1, end_page=1):
                                 break
                         
                         # 첫 번째 게시물 체크포인트 저장
-                        if page == 1 and len(announcements) == 0:
+                        if page == start_page and len(announcements) == 0:
                             print(f"체크포인트 저장: {reg_date}, {title}")
                             checkpoint.save_checkpoint(reg_date, title)
                         
@@ -415,31 +406,48 @@ headers = {
 class CrawlerCheckpoint:
     def __init__(self, site_name):
         self.site_name = site_name
-        self.checkpoint_file = f'checkpoints/{site_name}_last_crawled.json'
+        # 절대 경로로 변경
+        self.checkpoint_dir = '/home/pmc/work_space/ALRIMI/Crawlers/checkpoints'
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, f'{site_name}_last_crawled.json')
         self.last_crawled = self.load_checkpoint()
         
     def load_checkpoint(self):
         """체크포인트 파일 로드"""
-        if not os.path.exists('checkpoints'):
-            os.makedirs('checkpoints')
+        try:
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
             
-        if os.path.exists(self.checkpoint_file):
-            with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            if os.path.exists(self.checkpoint_file):
+                with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"체크포인트 로드 중 오류: {e}")
         return None
         
     def save_checkpoint(self, post_date, title):
         """최신 크롤링 정보 저장"""
-        checkpoint_data = {
-            'last_post_date': post_date,
-            'last_title': title,
-            'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        with open(self.checkpoint_file, 'w', encoding='utf-8') as f:
-            json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
-        
-        self.last_crawled = checkpoint_data
+        try:
+            checkpoint_data = {
+                'last_post_date': post_date,
+                'last_title': title,
+                'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+                print(f"체크포인트 디렉토리 생성: {self.checkpoint_dir}")
+            
+            with open(self.checkpoint_file, 'w', encoding='utf-8') as f:
+                json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
+            
+            self.last_crawled = checkpoint_data
+            print(f"체크포인트 저장 완료: {self.checkpoint_file}")
+            
+        except Exception as e:
+            print(f"체크포인트 저장 중 오류: {e}")
+            print(f"시도한 경로: {self.checkpoint_file}")
+            raise
 
 # 체크포인트 확인을 위한 함수 추가
 def print_checkpoint(site_name='mss'):
@@ -476,11 +484,11 @@ def insert_into_db(connection, announcements):
                 POSTDATE, ANNOUNCEMENT_NUMBER, TITLE, 
                 CATEGORY, LOCATION, CONTENT, 
                 START, END, AGENCY, 
-                LINK, FILE, KEYWORD
+                LINK, FILE
             ) VALUES (
                 %s, %s, %s, %s,
                 %s, %s, %s, %s, 
-                %s, %s, %s, %s
+                %s, %s, %s
             )
         """
         
@@ -514,10 +522,6 @@ def insert_into_db(connection, announcements):
             if link and len(link) > 300:
                 link = link[:300]
 
-            keyword = announcement.get('KEYWORD')
-            if keyword and len(keyword) > 100:
-                keyword = keyword[:100]
-
             file = announcement.get('FILE')
             if file and len(file) > 200:
                 file = file[:200]
@@ -533,8 +537,7 @@ def insert_into_db(connection, announcements):
                 announcement.get('END'),
                 agency,
                 link,
-                file,
-                keyword
+                file
             )
             
             cursor.execute(insert_query, values)
