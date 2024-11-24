@@ -1,0 +1,48 @@
+ALRIMI/
+│
+├── Project/
+│   ├── __init__.py
+│   ├── main.py              # FastAPI 앱 및 라우터 설정
+│   │
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── endpoints/
+│   │   │   ├── __init__.py
+│   │   │   ├── announcement.py    # 사업공고 관련 API
+│   │   │   ├── proposal.py        # 제안서 관련 API
+│   │   │   └── recommendation.py  # 추천공고 관련 API
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py        # 설정
+│   │   └── constants.py     # 상수 정의
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── announcement.py  # 공고 관련 모델
+│   │   ├── proposal.py      # 제안서 관련 모델
+│   │   └── recommendation.py # 추천 관련 모델
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── announcement_service.py
+│   │   ├── proposal_service.py
+│   │   └── recommendation_service.py
+│   │
+│   └── graph/
+│       ├── __init__.py
+│       ├── nodes/
+│       │   ├── __init__.py
+│       │   ├── loader_node.py
+│       │   ├── retriever_node.py
+│       │   └── proposal_node.py
+│       └── state.py         # GraphState 정의
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_announcement.py
+│   ├── test_proposal.py
+│   └── test_recommendation.py
+│
+├── requirements.txt
+└── README.md

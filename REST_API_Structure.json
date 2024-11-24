@@ -1,88 +1,65 @@
 {
-    "사업공고리스트_API": {
-      "request": {
-        "method": "GET",
-        "parameters": {
-          "page": "Integer",
-          "size": "Integer"
-        }
-      },
-      "response": {
-        "items": [{
-          "공고일련번호": "String",
-          "기관명": "String",
-          "지역": "String",
-          "공고제목": "String",
-          "공고내용": "String",
-          "공고url": "String",
-          "접수기간": {
-            "시작일": "Date",
-            "종료일": "Date"
-          }
-        }],
-        "페이지정보": {
-          "현재페이지": "Integer",
-          "전체페이지": "Integer",
-          "페이지사이즈": "Integer"
-        }
-      }
-    },
-  
-    "제안서_API": {
-      "request": {
-        "method": "POST",
-        "ui_status": {
-          "제안서작성버튼상태": "Boolean"
-        },
-        "customer_info": {
-          "기업명": "String",
-          "기업id": "String",
-          "주소": "String",
-          "사업분야": "String",
-          "회사소개서": {
-            "type": "PDF",
-            "required": false
-          }
-        }
-      },
-      "response": {
-        "제안서_내용": {
-          "기업id": "String",
-          "공고일련번호": "String",
-          "내용": "String",
-          "생성일자": "Date"
-        }
-      }
-    },
-  
-    "추천공고_API": {
-      "request": {
-        "method": "POST",
-        "ui_status": {
-          "추천버튼상태": "Boolean"
-        },
-        "customer_info": {
-          "기업명": "String",
-          "기업id": "String",
-          "주소": "String",
-          "사업분야": "String",
-          "회사소개서": {
-            "type": "PDF",
-            "required": false
-          }
-        }
-      },
-      "response": {
-        "recommendations": [{
-          "기업id": "String",
-          "공고일련번호": "String",
-          "추천사유": {
-            "시작": "String",
-            "분야": "String",
-            "본문": "String"
-          },
-          "추천일자": "Date"
-        }]
-      }
+  "사업공고리스트_요청_API": {
+    "method": "GET",
+    "parameters": {
+      "page": "Integer",      // 현재 페이지 (기본값: 1)
+      "공고문출력수": "Integer"  // 페이지당 출력할 공고 수 (기본값: 10)
     }
+  },
+
+  "사업공고리스트_응답_API": {
+    "items": [{
+      "공고일련번호": "Integer",  
+      "공고제목": "String",
+      "지역": "String",
+      "기관명": "String",
+      "공고내용": "String",
+      "시작" : "String",  // 예산 소진시 까지, 선착순 모집 등 날짜 대신 들어올 수 있
+      "종료" : "String",
+      "공고문사이트" : "String", // 추가된 부분
+      "공고url": "String"
+    }]
+  },
+
+  "제안서_요청_API": {
+    "method": "POST",
+    "parameters": {
+      "공고일련번호": "Integer",  // 선택한 공고문
+      "기업명": "String",
+      "주소": "String",  // 도로명 주소
+      "사업분야": "String",  // 콤마(,)를 이용해서 입력
+      "회사소개서": "String"
+    }
+  },
+
+  "제안서_응답_API": {
+    "공고일련번호": "Integer",
+    "공고제목": "String",
+    "제안서내용": "String",
+    "생성일자": "Date"
+  },
+
+  "추천공고_요청_API": {
+    "method": "POST",
+    "parameters": {
+      "공고일련번호": "Integer",  // 선택한 공고문
+      "기업명": "String",
+      "주소": "String",  // 도로명 주소
+      "사업분야": "String",  // 콤마(,)를 이용해서 입력
+      "회사소개서": "String"
+    }
+  },
+
+  "추천공고_응답_API": {
+    "recommendations": [{
+      "추천순위": "Integer",
+      "공고일련번호": "Integer",
+      "공고제목": "String",
+      "추천사유": "String",
+      // 남은 기간 고려
+      // 카테고리 : 1, 2, 3
+      //출력 : 1번: 분야와 지역 일치, 2번: 분야 일치, 3번: 지역 일치
+      "추천일자": "Date"
+    }]
   }
+}
