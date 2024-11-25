@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 from fastapi import FastAPI
-from Project.api.endpoints import announcement  # Project 추가
+from Project.api.endpoints import announcement, proposal
 
 # FastAPI 앱 시작 로그
 logger.debug("FastAPI 애플리케이션 시작")
@@ -20,12 +20,32 @@ app = FastAPI(
     version="1.0.0"
 )
 
+###
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# 정적 파일 제공 설정
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 테스트 페이지 라우트
+@app.get("/test")
+async def get_test_form():
+    return FileResponse("static/test_form.html")
+###
+
 app.include_router(
     announcement.router, 
     prefix="/api/v1", 
     tags=["announcements"]
 )
 
+app.include_router(
+    proposal.router,
+    prefix="/api/v1",
+    tags=["proposals"]
+)
+
 if __name__ == "__main__":
     import uvicorn
+    logger.info("서버 시작 중...")
     uvicorn.run(app, host="0.0.0.0", port=8001)
