@@ -23,18 +23,34 @@ app = FastAPI(
 ###
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+# CORS 설정 추가
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 모든 origin 허용
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 정적 파일 제공 설정
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 테스트 페이지 라우트
-@app.get("/test")
+@app.get("/test", response_class=FileResponse)
 async def get_test_form():
-    return FileResponse("static/test_form.html")
+    return FileResponse(
+        "static/test_form.html",
+        media_type='text/html'
+    )
 
-@app.get("/test/recommendation")
+@app.get("/test/recommendation", response_class=FileResponse)
 async def get_recommendation_test():
-    return FileResponse("static/recommendation_test.html")
+    return FileResponse(
+        "static/recommendation_test.html",
+        media_type='text/html'
+    )
 ###
 
 app.include_router(

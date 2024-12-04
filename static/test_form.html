@@ -36,18 +36,20 @@
         button:hover {
             background-color: #45a049;
         }
-        .response {
+        #response {
             margin-top: 20px;
             padding: 15px;
             border: 1px solid #ddd;
             border-radius: 4px;
             white-space: pre-wrap;
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
         }
     </style>
 </head>
 <body>
     <h2>제안서 생성 요청</h2>
-    <form action="/api/v1/proposals/" method="POST">
+    <form id="proposalForm">
         <div class="form-group">
             <label for="announcement_id">공고일련번호:</label>
             <input type="number" id="announcement_id" name="공고일련번호" required>
@@ -66,6 +68,59 @@
         </div>
         <button type="submit">제안서 생성</button>
     </form>
-    <div id="response" class="response" style="display: none;"></div>
+    <div id="response"></div>
+
+    <script>
+        document.getElementById('proposalForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // 폼 데이터 준비
+            const formData = new FormData(this);
+            
+            // 응답 영역 초기화
+            const responseDiv = document.getElementById('response');
+            responseDiv.textContent = '제안서 생성 시작...';
+            
+            try {
+                // 제안서 생성 API 호출
+                const response = await fetch('/api/v1/proposals/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // 스트림 처리
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+
+                while (true) {
+                    const {value, done} = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            let data = line.slice(5).trim();
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const jsonData = JSON.parse(data);
+                                if (jsonData.type === 'content' && jsonData.chunk !== undefined) {
+                                    content += jsonData.chunk;
+                                    responseDiv.textContent = content;
+                                }
+                            } catch (e) {
+                                console.log('Parsing error:', e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                responseDiv.textContent = '오류 발생: ' + error.message;
+            }
+        });
+    </script>
 </body>
 </html>
