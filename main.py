@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 from fastapi import FastAPI
-from Project.api.endpoints import announcement, proposal
+from Project.api.endpoints import announcement, proposal, recommendation
 
 # FastAPI 앱 시작 로그
 logger.debug("FastAPI 애플리케이션 시작")
@@ -31,6 +31,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/test")
 async def get_test_form():
     return FileResponse("static/test_form.html")
+
+@app.get("/test/recommendation")
+async def get_recommendation_test():
+    return FileResponse("static/recommendation_test.html")
 ###
 
 app.include_router(
@@ -43,6 +47,12 @@ app.include_router(
     proposal.router,
     prefix="/api/v1",
     tags=["proposals"]
+)
+
+app.include_router(             
+    recommendation.router,
+    prefix="/api/v1",
+    tags=["recommendations"]
 )
 
 if __name__ == "__main__":

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>추천 시스템 테스트</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .recommendation-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            background-color: #fee;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>사업공고 추천 시스템</h2>
+    <div id="error" class="error"></div>
+    <form id="recommendationForm">
+        <div class="form-group">
+            <label for="company_name">기업명:</label>
+            <input type="text" id="company_name" name="기업명" placeholder="예: ORION" required>
+        </div>
+        <div class="form-group">
+            <label for="address">주소:</label>
+            <input type="text" id="address" name="주소" placeholder="예: 서울시 강남구" required>
+        </div>
+        <div class="form-group">
+            <label for="business_fields">사업분야(콤마로 구분):</label>
+            <input type="text" id="business_fields" name="사업분야" placeholder="예: AI,빅데이터" required>
+        </div>
+        <button type="submit">추천 받기</button>
+    </form>
+
+    <div id="result" class="result" style="display: none;">
+        <h3>추천 결과</h3>
+        <div id="recommendations"></div>
+    </div>
+
+    <script>
+        document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('error');
+            const resultDiv = document.getElementById('result');
+            const recommendationsDiv = document.getElementById('recommendations');
+            
+            try {
+                // 입력값 가져오기
+                const company_name = document.getElementById('company_name').value;
+                const address = document.getElementById('address').value;
+                const business_fields = document.getElementById('business_fields').value.split(',').map(field => field.trim());
+
+                // API 요청
+                const response = await fetch('http://localhost:8001/api/v1/recommendations/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        기업명: company_name,
+                        주소: address,
+                        사업분야: business_fields,
+                        회사소개서URL: ""
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // 결과 표시
+                recommendationsDiv.innerHTML = data.recommendations.map((rec, index) => `
+                    <div class="recommendation-item">
+                        <h4>${rec.추천순위}. ${rec.공고제목}</h4>
+                        <p>공고번호: ${rec.공고일련번호}</p>
+                        <p>추천사유: ${rec.추천사유}</p>
+                        <p><a href="${rec.공고URL}" target="_blank">공고 상세보기</a></p>
+                        <p>추천일자: ${rec.추천일자}</p>
+                    </div>
+                `).join('');
+
+                errorDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = `오류 발생: ${error.message}`;
+                errorDiv.style.display = 'block';
+                resultDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

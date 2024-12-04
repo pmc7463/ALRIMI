@@ -16,6 +16,7 @@ import os
 from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
+from typing import List, Dict, Optional
 
 def run():
     """크롤러 메인 함수"""

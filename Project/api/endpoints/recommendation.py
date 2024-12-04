@@ -3,51 +3,33 @@ from typing import List
 import logging
 from datetime import datetime
 from ...models.recommendation import RecommendationRequest, RecommendationResponse, RecommendationItem
-from ...services.recommendation_engine import RecommendationEngine
-from ...database.database import Database
+from ...services.recommendation_service import RecommendationService
+import os
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
-recommendation_engine = RecommendationEngine()
-db = Database()
+recommendation_service = RecommendationService()
 
 @router.post("/recommendations/", response_model=RecommendationResponse)
 async def get_recommendations(request: RecommendationRequest):
     """공고 추천 API"""
     try:
-        # DB 연결
-        connection = await db.connect()
-        if not connection:
-            raise HTTPException(status_code=500, detail="데이터베이스 연결 실패")
-
-        cursor = connection.cursor(dictionary=True)
+        logger.info(f"추천 요청 - 기업: {request.기업명}")
         
-        # 활성 공고 조회
-        cursor.execute("""
-            SELECT ID, TITLE, LOCATION, CATEGORY, CONTENT, START, END, LINK
-            FROM Crawler
-            WHERE END >= CURRENT_DATE OR END IN ('예산 소진시', '예산 소진시까지', '상시')
-        """)
-        
-        announcements = cursor.fetchall()
-        
-        # 추천 실행
-        recommendations = recommendation_engine.recommend(
-            company_info={
-                '주소': request.주소,
-                '사업분야': request.사업분야,
-                '회사소개서': request.회사소개서URL
-            },
-            announcements=announcements
+        # 회사소개서URL은 사용하지 않음 (자동으로 PDF 파일 찾기)
+        recommendations = recommendation_service.get_recommendations(
+            company_name=request.기업명,
+            company_address=request.주소,
+            business_fields=request.사업분야
         )
         
-        # 응답 생성
         return RecommendationResponse(
             recommendations=[
                 RecommendationItem(
                     추천순위=idx + 1,
-                    공고일련번호=rec['announcement']['ID'],
-                    공고제목=rec['announcement']['TITLE'],
-                    공고URL=rec['announcement']['LINK'],
+                    공고일련번호=rec['announcement_id'],
+                    공고제목=rec['title'],
+                    공고URL=rec['url'],
                     추천사유=rec['reason'],
                     추천일자=datetime.now().date()
                 )
@@ -56,9 +38,5 @@ async def get_recommendations(request: RecommendationRequest):
         )
 
     except Exception as e:
-        logging.error(f"추천 처리 중 오류 발생: {str(e)}")
+        logger.error(f"추천 처리 중 오류 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
