@@ -65,7 +65,7 @@ class RecommendationService:
 
         return company_info
 
-    def calculate_similarity_score(self, query_vector: np.ndarray, k: int = 30) -> List[Dict]:
+    def calculate_similarity_score(self, query_vector: np.ndarray, k: int = 100) -> List[Dict]:
         """유사도 기반 공고 검색"""
         if self.index is None:
             raise Exception("벡터 DB가 로드되지 않았습니다")
@@ -89,7 +89,7 @@ class RecommendationService:
         company_name: str,
         company_address: str,
         business_fields: List[str],
-        top_k: int = 10
+        top_k: int = 20
     ) -> List[Dict]:
         """추천 공고 검색"""
         try:
@@ -133,13 +133,14 @@ class RecommendationService:
 
                 # 4. 최종 점수
                 final_score = (
-                    field_score * 0.2 +          # 분야 매칭
-                    location_score * 0.3 +       # 지역 매칭
-                    content_similarity * 0.4 +    # 내용 유사도
+                    field_score * 0.7 +          # 분야 매칭
+                    location_score * 0.1 +       # 지역 매칭
+                    content_similarity * 0.1 +    # 내용 유사도
                     time_score * 0.1              # 남은 기간
                 )
                 
                 # 5. 추천 사유
+                """
                 if field_score > 0 and location_score > 0:
                     reason = f"분야와 지역이 일치 (유사도: {content_similarity:.2f})"
                     category = 1
@@ -151,6 +152,19 @@ class RecommendationService:
                     category = 3
                 else:
                     continue
+                """
+                if field_score >= 0.01 and location_score > 0:
+                    reason = f"분야와 지역이 일치"
+                    category = 1
+                elif field_score >= 0.01:
+                    reason = f"분야 일치"
+                    category = 2
+                elif location_score > 0:
+                    reason = f"지역 일치"
+                    category = 3
+                else:
+                    reason = "내용 기반 추천" 
+                    category = 4  
 
                 recommendations.append({
                     'score': final_score,

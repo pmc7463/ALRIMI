@@ -28,14 +28,16 @@ async def generate_proposal_stream(
     business_fields: list[str],
     announcement_title: str,
     announcement_content: str,
+    announcement_url: str,  # URL 추가
     공고일련번호: int
 ) -> AsyncGenerator[str, None]:
     try:
-        # 초기 메타데이터 전송
+        # 초기 메타데이터 전송 (제목 포함)
         metadata = {
             "type": "metadata",
             "company_name": company_name,
-            "announcement_title": announcement_title
+            "announcement_title": announcement_title,
+            "url": announcement_url  # URL 추가
         }
         yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
 
@@ -96,7 +98,7 @@ async def create_proposal(
 
         cursor = connection.cursor(dictionary=True)
         cursor.execute("""
-            SELECT TITLE, CONTENT FROM Crawler WHERE ID = %s
+            SELECT TITLE, CONTENT, LINK FROM Crawler WHERE ID = %s
         """, (공고일련번호,))
         
         announcement = cursor.fetchone()
@@ -111,6 +113,7 @@ async def create_proposal(
                 business_fields=사업분야.split(','),
                 announcement_title=announcement["TITLE"],
                 announcement_content=announcement["CONTENT"],
+                announcement_url=announcement["LINK"],
                 공고일련번호=공고일련번호
             ),
             media_type="text/event-stream"

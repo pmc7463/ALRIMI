@@ -44,6 +44,7 @@
             white-space: pre-wrap;
             min-height: 200px;
             font-family: 'Courier New', monospace;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -63,7 +64,7 @@
             <input type="text" id="address" name="주소" placeholder="예: 서울시 강남구" required>
         </div>
         <div class="form-group">
-            <label for="business_fields">사업분야(콤마로 구분):</label>
+            <label for="business_fields">키워드(콤마로 구분):</label>
             <input type="text" id="business_fields" name="사업분야" placeholder="예: AI,빅데이터" required>
         </div>
         <button type="submit">제안서 생성</button>
@@ -74,24 +75,22 @@
         document.getElementById('proposalForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // 폼 데이터 준비
             const formData = new FormData(this);
-            
-            // 응답 영역 초기화
             const responseDiv = document.getElementById('response');
             responseDiv.textContent = '제안서 생성 시작...';
             
             try {
-                // 제안서 생성 API 호출
                 const response = await fetch('/api/v1/proposals/', {
                     method: 'POST',
                     body: formData
                 });
 
-                // 스트림 처리
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let content = '';
+                let title = '';
+                let url = '';
+                let isFirst = true;
 
                 while (true) {
                     const {value, done} = await reader.read();
@@ -107,9 +106,18 @@
                             
                             try {
                                 const jsonData = JSON.parse(data);
-                                if (jsonData.type === 'content' && jsonData.chunk !== undefined) {
+                                
+                                // 메타데이터(제목) 처리
+                                if (jsonData.type === 'metadata') {
+                                    // 제목과 URL을 함께 설정
+                                    title = `공고 제목: ${jsonData.announcement_title}\n`;
+                                    title += `공고 URL: ${jsonData.url}\n\n`;
+                                    responseDiv.textContent = title + '제안서 작성 중...\n';
+                                }
+                                // 내용 처리
+                                else if (jsonData.type === 'content' && jsonData.chunk !== undefined) {
                                     content += jsonData.chunk;
-                                    responseDiv.textContent = content;
+                                    responseDiv.textContent = title + content;
                                 }
                             } catch (e) {
                                 console.log('Parsing error:', e);
